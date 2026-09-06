@@ -79,7 +79,7 @@ export const getEmployeesList = (): Employee[] => {
 };
 
 export default function Login() {
-  const { lang } = useLang();
+  const { lang, toggleLang } = useLang();
   const navigate = useNavigate();
   const [username, setUsername] = useState<string>('');
   const [password, setPassword] = useState<string>('');
@@ -154,116 +154,138 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-[85vh] bg-slate-50 flex items-center justify-center p-4 md:p-8">
+    <div className="min-h-screen bg-slate-50/80 flex flex-col justify-between items-center py-6 sm:py-10 px-4 font-sans select-none">
+      {/* Top Bar with Language Switcher */}
+      <div className="w-full max-w-md flex justify-end items-center">
+        <button
+          type="button"
+          onClick={toggleLang}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 rounded-full text-xs font-bold border border-slate-200 shadow-2xs transition-all cursor-pointer"
+        >
+          <span className="text-slate-400 text-[10px]">🌐</span>
+          <span>{lang === 'bn' ? 'English' : 'বাংলা'}</span>
+        </button>
+      </div>
+
+      {/* Center White Card */}
       <motion.div 
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-4xl bg-white border border-slate-200/80 rounded-3xl shadow-xl overflow-hidden flex flex-col md:flex-row min-h-[500px]"
+        transition={{ duration: 0.25 }}
+        className="w-full max-w-[420px] bg-white border border-slate-200/90 rounded-3xl p-7 sm:p-9 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.06)] space-y-6"
       >
-        
-        {/* Left Side: Brand Panel */}
-        <div className="bg-gradient-to-br from-brand-green-dark via-brand-green to-slate-950 text-white p-8 md:p-12 flex flex-col justify-between md:w-[380px] shrink-0">
+        {/* Brand & Logo Header */}
+        <div className="text-center space-y-2">
+          <div className="w-16 h-16 mx-auto bg-slate-50/70 border border-slate-200/80 rounded-2xl p-2.5 shadow-2xs flex items-center justify-center">
+            <img src="/logo.svg" alt="Smart Trading Logo" className="w-full h-full object-contain" />
+          </div>
           <div>
-            <div className="flex items-center gap-3.5 mb-8">
-              <div className="w-12 h-12 bg-white rounded-2xl p-2 shadow-lg flex items-center justify-center shrink-0">
-                <img src="/logo.svg" alt="Smart Trading" className="w-full h-full object-contain" />
-              </div>
-              <div>
-                <h3 className="font-extrabold text-base md:text-lg tracking-wider uppercase">
-                  {lang === 'bn' ? 'স্মার্ট ট্রেডিং' : 'Smart Trading'}
-                </h3>
-                <span className="text-[10px] text-brand-gold tracking-widest uppercase block mt-0.5">
-                  {lang === 'bn' ? 'লগইন পোর্টাল' : 'Login Portal'}
-                </span>
-              </div>
-            </div>
-            
-            <div className="space-y-4">
-              <h4 className="font-bold text-sm text-brand-gold uppercase tracking-wider">
-                {lang === 'bn' ? 'স্বাগতম' : 'Welcome'}
-              </h4>
-              <p className="text-xs text-white/70 leading-relaxed">
-                {lang === 'bn' 
-                  ? 'স্মার্ট ট্রেডিং-এর অফিসিয়াল ইন্টারনাল পোর্টালে আপনাকে স্বাগতম। আপনার অ্যাকাউন্ট অ্যাক্সেস করতে অনুগ্রহ করে আইডি এবং পাসওয়ার্ড দিয়ে লগইন করুন।' 
-                  : 'Welcome to the official internal portal of Smart Trading. Please log in on the right using your credentials to access your dashboard.'}
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-8 text-xs text-white/40 border-t border-white/10 pt-6">
-            © {new Date().getFullYear()} Smart Trading.<br />
-            {lang === 'bn' ? 'সর্বস্বত্ব সংরক্ষিত।' : 'All Rights Reserved.'}
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+              Smart Trading
+            </h1>
+            <p className="text-xs text-slate-450 font-medium mt-0.5">
+              {lang === 'bn' ? 'এইচআরএমএস ও কর্মচারী লগইন পোর্টাল' : 'HRMS & Employee Login Portal'}
+            </p>
           </div>
         </div>
 
-        {/* Right Side: Credentials Form */}
-        <div className="flex-1 p-8 md:p-12 flex flex-col justify-center bg-slate-50/50">
-          <div className="max-w-md mx-auto w-full">
-            
-            <h3 className="text-xl font-bold text-slate-800 mb-6 text-center md:text-left">
-              {lang === 'bn' ? 'অ্যাকাউন্টে প্রবেশ করুন' : 'Login to Account'}
-            </h3>
+        {/* Login Form */}
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div className="space-y-1.5 text-left">
+            <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide">
+              {lang === 'bn' ? 'আইডি অথবা ইমেইল' : 'ID or Email'}
+            </label>
+            <div className="relative">
+              <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
+              <input
+                type="text"
+                placeholder={lang === 'bn' ? 'যেমন: ST-101 অথবা admin' : 'e.g. ST-101 or admin'}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full bg-slate-50/60 border border-slate-200 focus:bg-white focus:border-brand-green focus:ring-4 focus:ring-brand-green/10 rounded-xl pl-10 pr-3.5 py-3 text-xs sm:text-sm text-slate-800 font-medium outline-none transition-all"
+                required
+              />
+            </div>
+          </div>
 
-            <form onSubmit={handleLogin} className="space-y-5">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wide">
-                  {lang === 'bn' ? 'আইডি অথবা ইমেইল' : 'ID or Email'}
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. ST-101 / rahim@smarttrading.com"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3.5 text-sm focus:border-brand-green outline-none shadow-sm transition-all"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wide">
-                  {lang === 'bn' ? 'পাসওয়ার্ড / পিন' : 'Password / PIN'}
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-xl pl-11 pr-11 py-3.5 text-sm focus:border-brand-green outline-none font-mono shadow-sm transition-all font-bold"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer border-0 bg-transparent p-1"
-                    title={showPassword ? (lang === 'bn' ? 'পাসওয়ার্ড লুকান' : 'Hide') : (lang === 'bn' ? 'পাসওয়ার্ড দেখুন' : 'Show')}
-                  >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
-
-              {errorMsg && (
-                <div className="flex items-center gap-2.5 p-3.5 bg-red-50 border border-red-200 text-red-600 rounded-xl text-xs font-medium">
-                  <AlertCircle size={15} className="shrink-0" />
-                  <span>{errorMsg}</span>
-                </div>
-              )}
-
+          <div className="space-y-1.5 text-left">
+            <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide">
+              {lang === 'bn' ? 'লগইন পাসওয়ার্ড / পিন' : 'Password / PIN'}
+            </label>
+            <div className="relative">
+              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                placeholder="••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-slate-50/60 border border-slate-200 focus:bg-white focus:border-brand-green focus:ring-4 focus:ring-brand-green/10 rounded-xl pl-10 pr-10 py-3 text-xs sm:text-sm text-slate-800 font-bold outline-none font-mono transition-all"
+                required
+              />
               <button
-                type="submit"
-                className="w-full btn-primary py-4 font-bold text-xs uppercase tracking-wider shadow-lg shadow-brand-green/20 cursor-pointer flex items-center justify-center gap-2 group"
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer border-0 bg-transparent p-1 transition-colors"
+                title={showPassword ? (lang === 'bn' ? 'পাসওয়ার্ড লুকান' : 'Hide') : (lang === 'bn' ? 'পাসওয়ার্ড দেখুন' : 'Show')}
               >
-                <span>{lang === 'bn' ? 'লগইন করুন' : 'Log In'}</span>
-                <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
               </button>
-            </form>
+            </div>
+          </div>
 
+          {errorMsg && (
+            <div className="flex items-center gap-2 p-3 bg-rose-50 border border-rose-200/80 text-rose-700 rounded-xl text-xs font-medium text-left animate-shake">
+              <AlertCircle size={15} className="shrink-0 text-rose-500" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
+          <button
+            type="submit"
+            className="w-full bg-brand-green hover:bg-brand-green-dark text-white rounded-xl py-3.5 font-bold text-xs uppercase tracking-wider shadow-md shadow-brand-green/20 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] border-0 mt-2"
+          >
+            <span>{lang === 'bn' ? 'লগইন করুন' : 'Log In'}</span>
+            <ArrowRight size={14} />
+          </button>
+        </form>
+
+        {/* Quick Demo Fill Box */}
+        <div className="pt-2 border-t border-slate-100">
+          <div className="p-3 bg-slate-50/70 border border-slate-200/70 rounded-2xl text-left space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                {lang === 'bn' ? 'কুইক লগইন সহায়তা' : 'Quick Demo Fill'}
+              </span>
+              <span className="text-[9px] text-brand-green font-bold bg-brand-green/10 px-1.5 py-0.5 rounded">
+                {lang === 'bn' ? 'পাসওয়ার্ড: 1234' : 'PIN: 1234'}
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => { setUsername('admin'); setPassword('1234'); setErrorMsg(''); }}
+                className="flex-1 py-1.5 px-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-[10.5px] font-bold text-slate-700 cursor-pointer shadow-2xs flex items-center justify-center gap-1 transition-all"
+              >
+                <Shield size={11} className="text-brand-green shrink-0" />
+                <span>{lang === 'bn' ? 'এডমিন (admin)' : 'Admin'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => { setUsername('ST-101'); setPassword('1234'); setErrorMsg(''); }}
+                className="flex-1 py-1.5 px-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-[10.5px] font-bold text-slate-700 cursor-pointer shadow-2xs flex items-center justify-center gap-1 transition-all"
+              >
+                <User size={11} className="text-brand-green shrink-0" />
+                <span>{lang === 'bn' ? 'স্টাফ (ST-101)' : 'Staff'}</span>
+              </button>
+            </div>
           </div>
         </div>
-
       </motion.div>
+
+      {/* Clean Minimal Footer */}
+      <footer className="text-center text-[11px] text-slate-400 font-medium pt-4">
+        © {new Date().getFullYear()} Smart Trading. {lang === 'bn' ? 'সর্বস্বত্ব সংরক্ষিত।' : 'All Rights Reserved.'}
+      </footer>
     </div>
   );
 }
