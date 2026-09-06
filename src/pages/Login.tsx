@@ -62,6 +62,47 @@ export const getEmployeesList = (): Employee[] => {
           modified.password = '1234';
           needsSave = true;
         }
+        // Migrate legacy construction departments & designations
+        if (modified.dept === 'Engineering' || modified.dept === 'প্রকৌশল') {
+          modified.dept = 'Management';
+          modified.deptBn = 'ব্যবস্থাপনা';
+          needsSave = true;
+        } else if (modified.dept === 'Design' || modified.dept === 'ডিজাইন নকশা') {
+          modified.dept = 'Sales & Retail';
+          modified.deptBn = 'বিক্রয় ও রিটেল';
+          needsSave = true;
+        } else if (modified.dept === 'Construction' || modified.dept === 'নির্মাণ') {
+          modified.dept = 'Inventory & Stock';
+          modified.deptBn = 'ইনভেন্টরি ও গোডাউন';
+          needsSave = true;
+        } else if (modified.dept === 'Marketing' || modified.dept === 'মার্কেটিং') {
+          modified.dept = 'Sales & Retail';
+          modified.deptBn = 'বিক্রয় ও রিটেল';
+          needsSave = true;
+        } else if (modified.dept === 'Finance' || modified.dept === 'অর্থ ও হিসাব') {
+          modified.dept = 'Accounts & Finance';
+          modified.deptBn = 'হিসাব ও অর্থ';
+          needsSave = true;
+        }
+
+        if (modified.designation === 'Project Manager' || modified.designationBn === 'প্রজেক্ট ম্যানেজার') {
+          modified.designation = 'Shop Manager';
+          modified.designationBn = 'শপ ম্যানেজার';
+          needsSave = true;
+        } else if (modified.designation === 'Senior Architect' || modified.designationBn === 'সিনিয়র স্থপতি') {
+          modified.designation = 'Senior Sales Executive';
+          modified.designationBn = 'সিনিয়র সেলস এক্সিকিউটিভ';
+          needsSave = true;
+        } else if (modified.designation === 'Site Engineer' || modified.designationBn === 'সাইট প্রকৌশলী') {
+          modified.designation = 'Inventory & Stock Incharge';
+          modified.designationBn = 'ইনভেন্টরি ইনচার্জ';
+          needsSave = true;
+        } else if (modified.designation === 'Accounts Officer' || modified.designationBn === 'হিসাব রক্ষণ কর্মকর্তা') {
+          modified.designation = 'Accounts Executive';
+          modified.designationBn = 'হিসাব কর্মকর্তা';
+          needsSave = true;
+        }
+
         return modified;
       });
       if (needsSave) {
@@ -74,11 +115,11 @@ export const getEmployeesList = (): Employee[] => {
   }
 
   const defaultList: Employee[] = [
-    { id: 'ST-101', email: 'rahim@smarttrading.com', name: 'Md. Rahim Uddin', nameBn: 'মোঃ রহিম উদ্দিন', designation: 'Project Manager', designationBn: 'প্রজেক্ট ম্যানেজার', dept: 'Engineering', deptBn: 'প্রকৌশল', baseSalary: 50000, joiningDate: '2024-01-10', shiftStartTime: '09:00', allowances: 5000, deductions: 2000, advanceSalary: 0, password: '1234' },
-    { id: 'ST-102', email: 'farhana@smarttrading.com', name: 'Farhana Islam', nameBn: 'ফারহানা ইসলাম', designation: 'Senior Architect', designationBn: 'সিনিয়র স্থপতি', dept: 'Design', deptBn: 'ডিজাইন নকশা', baseSalary: 45000, joiningDate: '2024-02-15', shiftStartTime: '09:00', allowances: 4000, deductions: 1500, advanceSalary: 2000, password: '1234' },
-    { id: 'ST-103', email: 'kamrul@smarttrading.com', name: 'Kamrul Hasan', nameBn: 'কামরুল হাসান', designation: 'Site Engineer', designationBn: 'সাইট প্রকৌশলী', dept: 'Construction', deptBn: 'নির্মাণ', baseSalary: 35000, joiningDate: '2024-03-20', shiftStartTime: '09:00', allowances: 3000, deductions: 1000, advanceSalary: 0, password: '1234' },
-    { id: 'ST-104', email: 'tania@smarttrading.com', name: 'Tania Akter', nameBn: 'তানিয়া আক্তার', designation: 'Accounts Officer', designationBn: 'হিসাব রক্ষণ কর্মকর্তা', dept: 'Finance', deptBn: 'অর্থ ও হিসাব', baseSalary: 30000, joiningDate: '2024-04-01', shiftStartTime: '09:00', allowances: 2500, deductions: 800, advanceSalary: 0, password: '1234' },
-    { id: 'ST-105', email: 'sajid@smarttrading.com', name: 'Sajid Al-Mahmud', nameBn: 'সাজিদ আল-মাহমুদ', designation: 'Sales Executive', designationBn: 'সেলস এক্সিকিউটিভ', dept: 'Marketing', deptBn: 'মার্কেটিং', baseSalary: 28000, joiningDate: '2024-05-12', shiftStartTime: '09:00', allowances: 2000, deductions: 500, advanceSalary: 1000, password: '1234' }
+    { id: 'ST-101', email: 'rahim@smarttrading.com', name: 'Md. Rahim Uddin', nameBn: 'মোঃ রহিম উদ্দিন', designation: 'Shop Manager', designationBn: 'শপ ম্যানেজার', dept: 'Management', deptBn: 'ব্যবস্থাপনা', baseSalary: 50000, joiningDate: '2024-01-10', shiftStartTime: '09:00', allowances: 5000, deductions: 2000, advanceSalary: 0, password: '1234' },
+    { id: 'ST-102', email: 'farhana@smarttrading.com', name: 'Farhana Islam', nameBn: 'ফারহানা ইসলাম', designation: 'Senior Sales Executive', designationBn: 'সিনিয়র সেলস এক্সিকিউটিভ', dept: 'Sales & Retail', deptBn: 'বিক্রয় ও রিটেল', baseSalary: 45000, joiningDate: '2024-02-15', shiftStartTime: '09:00', allowances: 4000, deductions: 1500, advanceSalary: 2000, password: '1234' },
+    { id: 'ST-103', email: 'kamrul@smarttrading.com', name: 'Kamrul Hasan', nameBn: 'কামরুল হাসান', designation: 'Inventory & Stock Incharge', designationBn: 'ইনভেন্টরি ইনচার্জ', dept: 'Inventory & Stock', deptBn: 'ইনভেন্টরি ও গোডাউন', baseSalary: 35000, joiningDate: '2024-03-20', shiftStartTime: '09:00', allowances: 3000, deductions: 1000, advanceSalary: 0, password: '1234' },
+    { id: 'ST-104', email: 'tania@smarttrading.com', name: 'Tania Akter', nameBn: 'তানিয়া আক্তার', designation: 'Accounts Executive', designationBn: 'হিসাব কর্মকর্তা', dept: 'Accounts & Finance', deptBn: 'হিসাব ও অর্থ', baseSalary: 30000, joiningDate: '2024-04-01', shiftStartTime: '09:00', allowances: 2500, deductions: 800, advanceSalary: 0, password: '1234' },
+    { id: 'ST-105', email: 'sajid@smarttrading.com', name: 'Sajid Al-Mahmud', nameBn: 'সাজিদ আল-মাহমুদ', designation: 'Sales & Support Officer', designationBn: 'সেলস ও কাস্টমার সার্ভিস', dept: 'Sales & Retail', deptBn: 'বিক্রয় ও রিটেল', baseSalary: 28000, joiningDate: '2024-05-12', shiftStartTime: '09:00', allowances: 2000, deductions: 500, advanceSalary: 1000, password: '1234' }
   ];
   localStorage.setItem('ob_employees_list', JSON.stringify(defaultList));
   return defaultList;

@@ -367,8 +367,8 @@ export default function Dashboard() {
   const [editNameBn, setEditNameBn] = useState('');
   const [editDesignation, setEditDesignation] = useState('');
   const [editDesignationBn, setEditDesignationBn] = useState('');
-  const [editDept, setEditDept] = useState('Engineering');
-  const [editDeptBn, setEditDeptBn] = useState('প্রকৌশল');
+  const [editDept, setEditDept] = useState('Sales & Retail');
+  const [editDeptBn, setEditDeptBn] = useState('বিক্রয় ও রিটেল');
   const [editEmail, setEditEmail] = useState('');
   const [editEmailPrefix, setEditEmailPrefix] = useState('');
   const [editSalary, setEditSalary] = useState('30000');
@@ -407,10 +407,10 @@ export default function Dashboard() {
   const [newName, setNewName] = useState('');
   const [newNameBn, setNewNameBn] = useState('');
   const [newEmailPrefix, setNewEmailPrefix] = useState('');
-  const [newDept, setNewDept] = useState('Engineering');
-  const [newDeptBn, setNewDeptBn] = useState('প্রকৌশল');
-  const [newDesignation, setNewDesignation] = useState('Executive');
-  const [newDesignationBn, setNewDesignationBn] = useState('কর্মকর্তা');
+  const [newDept, setNewDept] = useState('Sales & Retail');
+  const [newDeptBn, setNewDeptBn] = useState('বিক্রয় ও রিটেল');
+  const [newDesignation, setNewDesignation] = useState('Sales Executive');
+  const [newDesignationBn, setNewDesignationBn] = useState('সেলস এক্সিকিউটিভ');
   const [newSalary, setNewSalary] = useState('30000');
   const [newJoiningDate, setNewJoiningDate] = useState(new Date().toISOString().split('T')[0]);
   const [newShiftStartTime, setNewShiftStartTime] = useState('09:00');
@@ -1243,7 +1243,7 @@ export default function Dashboard() {
     return cleaned || (lang === 'bn' ? 'স্মার্ট ট্রেডিং শপ' : 'Smart Trading Shop');
   };
 
-  const calculateExpectedOutTime = (checkInStr: string, hoursToAdd: number = 11): string => {
+  const calculateExpectedOutTime = (checkInStr: string, hoursToAdd: number = 8): string => {
     if (!checkInStr || checkInStr === '-') return '-';
     const mins = parseTimeStrToMinutes(checkInStr);
     if (mins === 0 && !checkInStr.includes('12')) return '-';
@@ -1256,7 +1256,7 @@ export default function Dashboard() {
     return `${pad(h12)}:${pad(m)} ${period}`;
   };
 
-  const getDutyProgress = (checkInStr: string, checkOutStr?: string, targetHours: number = 11) => {
+  const getDutyProgress = (checkInStr: string, checkOutStr?: string, targetHours: number = 8) => {
     if (!checkInStr || checkInStr === '-') return null;
     const inM = parseTimeStrToMinutes(checkInStr);
     let currentM = 0;
@@ -1702,11 +1702,12 @@ export default function Dashboard() {
     }
 
     const deptBnMap: Record<string, string> = {
-      Engineering: 'প্রকৌশল',
-      Design: 'ডিজাইন',
-      Construction: 'নির্মাণ',
-      Finance: 'অর্থ ও হিসাব',
-      Marketing: 'মার্কেটিং'
+      'Sales & Retail': 'বিক্রয় ও রিটেল',
+      'Showroom & Shop': 'শপ ও শোরুম',
+      'Accounts & Finance': 'হিসাব ও অর্থ',
+      'Inventory & Stock': 'ইনভেন্টরি ও গোডাউন',
+      'Management': 'ব্যবস্থাপনা',
+      'Customer Service': 'গ্রাহক সেবা'
     };
 
     const newEmp: Employee = {
@@ -1717,7 +1718,7 @@ export default function Dashboard() {
       designation: finalDesignation,
       designationBn: finalDesignationBn,
       dept: newDept,
-      deptBn: deptBnMap[newDept] || 'প্রকৌশল',
+      deptBn: deptBnMap[newDept] || 'বিক্রয় ও রিটেল',
       baseSalary: salaryVal,
       joiningDate: joiningDateVal,
       shiftStartTime: shiftTimeVal,
@@ -1748,10 +1749,10 @@ export default function Dashboard() {
     setNewName('');
     setNewNameBn('');
     setNewEmailPrefix('');
-    setNewDept('Engineering');
-    setNewDeptBn('প্রকৌশল');
-    setNewDesignation('Executive');
-    setNewDesignationBn('কর্মকর্তা');
+    setNewDept('Sales & Retail');
+    setNewDeptBn('বিক্রয় ও রিটেল');
+    setNewDesignation('Sales Executive');
+    setNewDesignationBn('সেলস এক্সিকিউটিভ');
     setNewSalary('30000');
     setNewJoiningDate(new Date().toISOString().split('T')[0]);
     setNewShiftStartTime('09:00');
@@ -1799,11 +1800,12 @@ export default function Dashboard() {
     const fullEmail = cleanPrefix ? `${cleanPrefix}@smarttrading.com` : editEmail;
 
     const deptBnMap: Record<string, string> = {
-      Engineering: 'প্রকৌশল',
-      Design: 'ডিজাইন',
-      Construction: 'নির্মাণ',
-      Finance: 'অর্থ ও হিসাব',
-      Marketing: 'মার্কেটিং'
+      'Sales & Retail': 'বিক্রয় ও রিটেল',
+      'Showroom & Shop': 'শপ ও শোরুম',
+      'Accounts & Finance': 'হিসাব ও অর্থ',
+      'Inventory & Stock': 'ইনভেন্টরি ও গোডাউন',
+      'Management': 'ব্যবস্থাপনা',
+      'Customer Service': 'গ্রাহক সেবা'
     };
 
     const newSalaryVal = parseInt(editSalary) || 0;
@@ -1828,7 +1830,11 @@ export default function Dashboard() {
         return {
           ...emp,
           name: editName.trim(),
-          nameBn: editName.trim(),
+          nameBn: editNameBn.trim() || editName.trim(),
+          designation: editDesignation.trim() || emp.designation,
+          designationBn: editDesignationBn.trim() || editDesignation.trim() || emp.designationBn,
+          dept: editDept || emp.dept,
+          deptBn: deptBnMap[editDept] || editDeptBn || emp.deptBn,
           email: fullEmail,
           baseSalary: newSalaryVal,
           deductions: emp.deductions || 0,
@@ -4213,8 +4219,8 @@ export default function Dashboard() {
                       const outTimeVal = todayRecord?.checkOut && todayRecord.checkOut !== '-' ? todayRecord.checkOut : '';
                       const hasCheckedIn = !!inTimeVal;
                       const hasCheckedOut = !!outTimeVal;
-                      const expectedOut = calculateExpectedOutTime(inTimeVal, 11);
-                      const dutyProgress = getDutyProgress(inTimeVal, outTimeVal, 11);
+                      const expectedOut = calculateExpectedOutTime(inTimeVal, 8);
+                      const dutyProgress = getDutyProgress(inTimeVal, outTimeVal, 8);
                       const liveClockString = liveTime.toLocaleTimeString('en-US', {
                         hour: '2-digit',
                         minute: '2-digit',
@@ -5915,8 +5921,51 @@ export default function Dashboard() {
                           </div>
 
                           <div>
-                            <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{lang === 'bn' ? 'নাম' : 'Name'}</label>
-                            <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:border-brand-green outline-none font-bold text-slate-800" required />
+                            <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{lang === 'bn' ? 'নাম (Name)' : 'Name'}</label>
+                            <input type="text" value={editName} onChange={(e) => { setEditName(e.target.value); setEditNameBn(e.target.value); }} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:border-brand-green outline-none font-bold text-slate-800" required />
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{lang === 'bn' ? 'বিভাগ (Department)' : 'Department'}</label>
+                            <select
+                              value={editDept}
+                              onChange={(e) => {
+                                const dept = e.target.value;
+                                setEditDept(dept);
+                                const deptBnMap: Record<string, string> = {
+                                  'Sales & Retail': 'বিক্রয় ও রিটেল',
+                                  'Showroom & Shop': 'শপ ও শোরুম',
+                                  'Accounts & Finance': 'হিসাব ও অর্থ',
+                                  'Inventory & Stock': 'ইনভেন্টরি ও গোডাউন',
+                                  'Management': 'ব্যবস্থাপনা',
+                                  'Customer Service': 'গ্রাহক সেবা'
+                                };
+                                setEditDeptBn(deptBnMap[dept] || 'বিক্রয় ও রিটেল');
+                              }}
+                              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:border-brand-green outline-none font-bold text-slate-800 cursor-pointer"
+                            >
+                              <option value="Sales & Retail">{lang === 'bn' ? 'বিক্রয় ও রিটেল (Sales & Retail)' : 'Sales & Retail'}</option>
+                              <option value="Showroom & Shop">{lang === 'bn' ? 'শপ ও শোরুম (Showroom & Shop)' : 'Showroom & Shop'}</option>
+                              <option value="Accounts & Finance">{lang === 'bn' ? 'হিসাব ও অর্থ (Accounts & Finance)' : 'Accounts & Finance'}</option>
+                              <option value="Inventory & Stock">{lang === 'bn' ? 'ইনভেন্টরি ও গোডাউন (Inventory & Stock)' : 'Inventory & Stock'}</option>
+                              <option value="Management">{lang === 'bn' ? 'ব্যবস্থাপনা (Management)' : 'Management'}</option>
+                              <option value="Customer Service">{lang === 'bn' ? 'গ্রাহক সেবা (Customer Service)' : 'Customer Service'}</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{lang === 'bn' ? 'পদবী (Designation)' : 'Designation'}</label>
+                            <input
+                              type="text"
+                              value={editDesignation}
+                              placeholder={lang === 'bn' ? 'যেমন: সেলস এক্সিকিউটিভ / শপ ম্যানেজার' : 'e.g. Sales Executive / Shop Manager'}
+                              onChange={(e) => {
+                                setEditDesignation(e.target.value);
+                                setEditDesignationBn(e.target.value);
+                              }}
+                              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:border-brand-green outline-none font-bold text-slate-800"
+                              required
+                            />
                           </div>
 
                           <div>
@@ -6462,21 +6511,23 @@ export default function Dashboard() {
                           const dept = e.target.value;
                           setNewDept(dept);
                           const deptBnMap: Record<string, string> = {
-                            Engineering: 'প্রকৌশল',
-                            Design: 'ডিজাইন',
-                            Construction: 'নির্মাণ',
-                            Finance: 'অর্থ ও হিসাব',
-                            Marketing: 'মার্কেটিং'
+                            'Sales & Retail': 'বিক্রয় ও রিটেল',
+                            'Showroom & Shop': 'শপ ও শোরুম',
+                            'Accounts & Finance': 'হিসাব ও অর্থ',
+                            'Inventory & Stock': 'ইনভেন্টরি ও গোডাউন',
+                            'Management': 'ব্যবস্থাপনা',
+                            'Customer Service': 'গ্রাহক সেবা'
                           };
-                          setNewDeptBn(deptBnMap[dept] || 'প্রকৌশল');
+                          setNewDeptBn(deptBnMap[dept] || 'বিক্রয় ও রিটেল');
                         }}
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs focus:border-brand-green outline-none font-bold text-slate-800 cursor-pointer"
                       >
-                        <option value="Engineering">{lang === 'bn' ? 'প্রকৌশল (Engineering)' : 'Engineering'}</option>
-                        <option value="Design">{lang === 'bn' ? 'ডিজাইন (Design)' : 'Design'}</option>
-                        <option value="Construction">{lang === 'bn' ? 'নির্মাণ (Construction)' : 'Construction'}</option>
-                        <option value="Finance">{lang === 'bn' ? 'অর্থ ও হিসাব (Finance)' : 'Finance'}</option>
-                        <option value="Marketing">{lang === 'bn' ? 'মার্কেটিং (Marketing)' : 'Marketing'}</option>
+                        <option value="Sales & Retail">{lang === 'bn' ? 'বিক্রয় ও রিটেল (Sales & Retail)' : 'Sales & Retail'}</option>
+                        <option value="Showroom & Shop">{lang === 'bn' ? 'শপ ও শোরুম (Showroom & Shop)' : 'Showroom & Shop'}</option>
+                        <option value="Accounts & Finance">{lang === 'bn' ? 'হিসাব ও অর্থ (Accounts & Finance)' : 'Accounts & Finance'}</option>
+                        <option value="Inventory & Stock">{lang === 'bn' ? 'ইনভেন্টরি ও গোডাউন (Inventory & Stock)' : 'Inventory & Stock'}</option>
+                        <option value="Management">{lang === 'bn' ? 'ব্যবস্থাপনা (Management)' : 'Management'}</option>
+                        <option value="Customer Service">{lang === 'bn' ? 'গ্রাহক সেবা (Customer Service)' : 'Customer Service'}</option>
                       </select>
                     </div>
 
@@ -6486,7 +6537,7 @@ export default function Dashboard() {
                       </label>
                       <input
                         type="text"
-                        placeholder={lang === 'bn' ? 'যেমন: সাইট ইঞ্জিনিয়ার' : 'e.g. Site Engineer'}
+                        placeholder={lang === 'bn' ? 'যেমন: সেলস এক্সিকিউটিভ / শপ ম্যানেজার' : 'e.g. Sales Executive / Shop Manager'}
                         value={newDesignation}
                         onChange={(e) => {
                           setNewDesignation(e.target.value);
@@ -6726,21 +6777,23 @@ export default function Dashboard() {
                           const dept = e.target.value;
                           setNewDept(dept);
                           const deptBnMap: Record<string, string> = {
-                            Engineering: 'প্রকৌশল',
-                            Design: 'ডিজাইন',
-                            Construction: 'নির্মাণ',
-                            Finance: 'অর্থ ও হিসাব',
-                            Marketing: 'মার্কেটিং'
+                            'Sales & Retail': 'বিক্রয় ও রিটেল',
+                            'Showroom & Shop': 'শপ ও শোরুম',
+                            'Accounts & Finance': 'হিসাব ও অর্থ',
+                            'Inventory & Stock': 'ইনভেন্টরি ও গোডাউন',
+                            'Management': 'ব্যবস্থাপনা',
+                            'Customer Service': 'গ্রাহক সেবা'
                           };
-                          setNewDeptBn(deptBnMap[dept] || 'প্রকৌশল');
+                          setNewDeptBn(deptBnMap[dept] || 'বিক্রয় ও রিটেল');
                         }}
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs focus:border-brand-green outline-none font-bold text-slate-800 cursor-pointer"
                       >
-                        <option value="Engineering">{lang === 'bn' ? 'প্রকৌশল (Engineering)' : 'Engineering'}</option>
-                        <option value="Design">{lang === 'bn' ? 'ডিজাইন (Design)' : 'Design'}</option>
-                        <option value="Construction">{lang === 'bn' ? 'নির্মাণ (Construction)' : 'Construction'}</option>
-                        <option value="Finance">{lang === 'bn' ? 'অর্থ ও হিসাব (Finance)' : 'Finance'}</option>
-                        <option value="Marketing">{lang === 'bn' ? 'মার্কেটিং (Marketing)' : 'Marketing'}</option>
+                        <option value="Sales & Retail">{lang === 'bn' ? 'বিক্রয় ও রিটেল (Sales & Retail)' : 'Sales & Retail'}</option>
+                        <option value="Showroom & Shop">{lang === 'bn' ? 'শপ ও শোরুম (Showroom & Shop)' : 'Showroom & Shop'}</option>
+                        <option value="Accounts & Finance">{lang === 'bn' ? 'হিসাব ও অর্থ (Accounts & Finance)' : 'Accounts & Finance'}</option>
+                        <option value="Inventory & Stock">{lang === 'bn' ? 'ইনভেন্টরি ও গোডাউন (Inventory & Stock)' : 'Inventory & Stock'}</option>
+                        <option value="Management">{lang === 'bn' ? 'ব্যবস্থাপনা (Management)' : 'Management'}</option>
+                        <option value="Customer Service">{lang === 'bn' ? 'গ্রাহক সেবা (Customer Service)' : 'Customer Service'}</option>
                       </select>
                     </div>
 
@@ -6750,7 +6803,7 @@ export default function Dashboard() {
                       </label>
                       <input
                         type="text"
-                        placeholder={lang === 'bn' ? 'যেমন: সাইট ইঞ্জিনিয়ার' : 'e.g. Site Engineer'}
+                        placeholder={lang === 'bn' ? 'যেমন: সেলস এক্সিকিউটিভ / শপ ম্যানেজার' : 'e.g. Sales Executive / Shop Manager'}
                         value={newDesignation}
                         onChange={(e) => {
                           setNewDesignation(e.target.value);
