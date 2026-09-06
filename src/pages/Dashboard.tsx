@@ -385,7 +385,7 @@ export default function Dashboard() {
   const [adminAvatar, setAdminAvatar] = useState<string>(() => localStorage.getItem('ob_admin_avatar') || '');
   
   // Admin Panel States
-  const [employeesList, setEmployeesList] = useState<Employee[]>([]);
+  const [employeesList, setEmployeesList] = useState<Employee[]>(() => getEmployeesList());
   const [selectedDept, setSelectedDept] = useState<string>('All');
   const [paidStatus, setPaidStatus] = useState<Record<string, boolean>>({});
 
@@ -403,12 +403,14 @@ export default function Dashboard() {
   const [newNoticeTarget, setNewNoticeTarget] = useState('');
 
   // Add Employee Form States
-  const [newId, setNewId] = useState('');
+  const [newId, setNewId] = useState<string>(() => getNextEmployeeId(getEmployeesList()));
   const [newName, setNewName] = useState('');
   const [newNameBn, setNewNameBn] = useState('');
   const [newEmailPrefix, setNewEmailPrefix] = useState('');
   const [newDept, setNewDept] = useState('Engineering');
   const [newDeptBn, setNewDeptBn] = useState('প্রকৌশল');
+  const [newDesignation, setNewDesignation] = useState('Executive');
+  const [newDesignationBn, setNewDesignationBn] = useState('কর্মকর্তা');
   const [newSalary, setNewSalary] = useState('30000');
   const [newJoiningDate, setNewJoiningDate] = useState(new Date().toISOString().split('T')[0]);
   const [newShiftStartTime, setNewShiftStartTime] = useState('09:00');
@@ -1638,14 +1640,16 @@ export default function Dashboard() {
   // Add Employee Form Handler
   const handleAddEmployee = (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanId = newId.trim();
-    const cleanPrefix = newEmailPrefix.trim().replace(/@.*$/, '');
+    const cleanId = newId.trim().toUpperCase();
+    const cleanPrefix = newEmailPrefix.trim().toLowerCase().replace(/@.*$/, '').replace(/[^a-z0-9._-]/g, '');
     const cleanEmail = cleanPrefix ? `${cleanPrefix}@smarttrading.com` : '';
     const cleanName = newName.trim();
     const cleanNameBn = newNameBn.trim() || cleanName;
-    const salaryVal = parseInt(newSalary) || 20000;
+    const salaryVal = Math.max(0, parseInt(newSalary) || 30000);
     const joiningDateVal = newJoiningDate || new Date().toISOString().split('T')[0];
     const shiftTimeVal = newShiftStartTime || '09:00';
+    const finalDesignation = newDesignation.trim() || 'Executive';
+    const finalDesignationBn = newDesignationBn.trim() || (lang === 'bn' ? 'কর্মকর্তা' : 'Executive');
 
     if (!cleanId || !cleanEmail || !cleanName) {
       showAlertDialog({
@@ -1656,7 +1660,7 @@ export default function Dashboard() {
       return;
     }
 
-    if (employeesList.some(emp => emp.id.toLowerCase() === cleanId.toLowerCase() || emp.email.toLowerCase() === cleanEmail.toLowerCase())) {
+    if (employeesList.some(emp => emp.id.toUpperCase() === cleanId || emp.email.toLowerCase() === cleanEmail.toLowerCase())) {
       showAlertDialog({
         type: 'warning',
         title: lang === 'bn' ? 'ইতিপূর্বে বিদ্যমান' : 'Already Exists',
@@ -1678,16 +1682,16 @@ export default function Dashboard() {
       email: cleanEmail,
       name: cleanName,
       nameBn: cleanNameBn,
-      designation: 'Executive',
-      designationBn: 'কর্মকর্তা',
+      designation: finalDesignation,
+      designationBn: finalDesignationBn,
       dept: newDept,
       deptBn: deptBnMap[newDept] || 'প্রকৌশল',
       baseSalary: salaryVal,
       joiningDate: joiningDateVal,
       shiftStartTime: shiftTimeVal,
-      allowances: 0,
-      deductions: 0,
-      advanceSalary: 0,
+      allowances: Math.max(0, parseInt(newAllowances) || 0),
+      deductions: Math.max(0, parseInt(newDeductions) || 0),
+      advanceSalary: Math.max(0, parseInt(newAdvanceSalary) || 0),
       avatar: newAvatar || undefined,
       password: newPassword.trim() || '1234',
       salaryHistory: [
@@ -1712,6 +1716,10 @@ export default function Dashboard() {
     setNewName('');
     setNewNameBn('');
     setNewEmailPrefix('');
+    setNewDept('Engineering');
+    setNewDeptBn('প্রকৌশল');
+    setNewDesignation('Executive');
+    setNewDesignationBn('কর্মকর্তা');
     setNewSalary('30000');
     setNewJoiningDate(new Date().toISOString().split('T')[0]);
     setNewShiftStartTime('09:00');
@@ -1727,7 +1735,7 @@ export default function Dashboard() {
     showAlertDialog({
       type: 'success',
       title: lang === 'bn' ? 'কর্মকর্তা যুক্ত হয়েছে' : 'Employee Added',
-      message: lang === 'bn' ? 'কর্মকর্তা সফলভাবে সিস্টেমে যোগ করা হয়েছে!' : 'Employee added successfully!'
+      message: lang === 'bn' ? `কর্মকর্তা ${cleanName} (${cleanId}) সফলভাবে সিস্টেমে যোগ করা হয়েছে!` : `Employee ${cleanName} (${cleanId}) added successfully!`
     });
   };
 
@@ -2377,11 +2385,8 @@ export default function Dashboard() {
 
               <button
                 onClick={() => {
-                  if (isAdminLoggedIn) {
-                    navigate('/dashboard?tab=notices');
-                  } else {
-                    setShowNoticeModal(true);
-                  }
+                  setActiveSettingSection('notices');
+                  navigate('/dashboard?tab=settings');
                 }}
                 className="relative p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors border-0 cursor-pointer"
                 title={lang === 'bn' ? 'নোটিশ ও বিজ্ঞপ্তি' : 'Notices'}
@@ -6244,14 +6249,14 @@ export default function Dashboard() {
 
                     <div>
                       <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
-                        {lang === 'bn' ? 'ইমেইল এড্রেস (আবশ্যিক)' : 'Email (Req)'}
+                        {lang === 'bn' ? 'ইমেইল ইউজারনেম (আবশ্যিক)' : 'Email / Username (Req)'}
                       </label>
                       <div className="flex items-center rounded-xl bg-slate-50 border border-slate-200 overflow-hidden focus-within:border-brand-green">
                         <input
                           type="text"
-                          placeholder="username"
+                          placeholder="kamrul"
                           value={newEmailPrefix}
-                          onChange={(e) => setNewEmailPrefix(e.target.value.toLowerCase().replace(/@smarttrading\.com/g, '').replace(/[^a-z0-9._-]/g, ''))}
+                          onChange={(e) => setNewEmailPrefix(e.target.value.toLowerCase().replace(/@.*$/, '').replace(/[^a-z0-9._-]/g, ''))}
                           className="flex-1 min-w-0 bg-transparent px-3.5 py-2 text-xs outline-none font-bold text-slate-800"
                           required
                         />
@@ -6263,13 +6268,77 @@ export default function Dashboard() {
 
                     <div>
                       <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
-                        {lang === 'bn' ? 'নাম (আবশ্যিক)' : 'Name (Req)'}
+                        {lang === 'bn' ? 'নাম (আবশ্যিক)' : 'Full Name (Req)'}
                       </label>
                       <input
                         type="text"
                         placeholder="e.g. Kamrul Hasan"
                         value={newName}
-                        onChange={(e) => setNewName(e.target.value)}
+                        onChange={(e) => {
+                          setNewName(e.target.value);
+                          if (!newEmailPrefix) {
+                            const suggestedPrefix = e.target.value.toLowerCase().replace(/\s+/g, '.').replace(/[^a-z0-9._-]/g, '');
+                            setNewEmailPrefix(suggestedPrefix);
+                          }
+                        }}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs focus:border-brand-green outline-none font-bold text-slate-800"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
+                        {lang === 'bn' ? 'নাম বাংলায় (ঐচ্ছিক)' : 'Name in Bangla (Optional)'}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="যেমন: কামরুল হাসান"
+                        value={newNameBn}
+                        onChange={(e) => setNewNameBn(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs focus:border-brand-green outline-none font-bold text-slate-800"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
+                        {lang === 'bn' ? 'বিভাগ (Department)' : 'Department'}
+                      </label>
+                      <select
+                        value={newDept}
+                        onChange={(e) => {
+                          const dept = e.target.value;
+                          setNewDept(dept);
+                          const deptBnMap: Record<string, string> = {
+                            Engineering: 'প্রকৌশল',
+                            Design: 'ডিজাইন',
+                            Construction: 'নির্মাণ',
+                            Finance: 'অর্থ ও হিসাব',
+                            Marketing: 'মার্কেটিং'
+                          };
+                          setNewDeptBn(deptBnMap[dept] || 'প্রকৌশল');
+                        }}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs focus:border-brand-green outline-none font-bold text-slate-800 cursor-pointer"
+                      >
+                        <option value="Engineering">{lang === 'bn' ? 'প্রকৌশল (Engineering)' : 'Engineering'}</option>
+                        <option value="Design">{lang === 'bn' ? 'ডিজাইন (Design)' : 'Design'}</option>
+                        <option value="Construction">{lang === 'bn' ? 'নির্মাণ (Construction)' : 'Construction'}</option>
+                        <option value="Finance">{lang === 'bn' ? 'অর্থ ও হিসাব (Finance)' : 'Finance'}</option>
+                        <option value="Marketing">{lang === 'bn' ? 'মার্কেটিং (Marketing)' : 'Marketing'}</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
+                        {lang === 'bn' ? 'পদবী (Designation)' : 'Designation'}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder={lang === 'bn' ? 'যেমন: সাইট ইঞ্জিনিয়ার' : 'e.g. Site Engineer'}
+                        value={newDesignation}
+                        onChange={(e) => {
+                          setNewDesignation(e.target.value);
+                          setNewDesignationBn(e.target.value);
+                        }}
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs focus:border-brand-green outline-none font-bold text-slate-800"
                         required
                       />
@@ -6444,14 +6513,14 @@ export default function Dashboard() {
 
                     <div>
                       <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
-                        {lang === 'bn' ? 'ইমেইল এড্রেস (আবশ্যিক)' : 'Email (Req)'}
+                        {lang === 'bn' ? 'ইমেইল ইউজারনেম (আবশ্যিক)' : 'Email / Username (Req)'}
                       </label>
                       <div className="flex items-center rounded-xl bg-slate-50 border border-slate-200 overflow-hidden focus-within:border-brand-green">
                         <input
                           type="text"
-                          placeholder="username"
+                          placeholder="kamrul"
                           value={newEmailPrefix}
-                          onChange={(e) => setNewEmailPrefix(e.target.value.toLowerCase().replace(/@smarttrading\.com/g, '').replace(/[^a-z0-9._-]/g, ''))}
+                          onChange={(e) => setNewEmailPrefix(e.target.value.toLowerCase().replace(/@.*$/, '').replace(/[^a-z0-9._-]/g, ''))}
                           className="flex-1 min-w-0 bg-transparent px-3.5 py-2 text-xs outline-none font-bold text-slate-800"
                           required
                         />
@@ -6463,13 +6532,77 @@ export default function Dashboard() {
 
                     <div>
                       <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
-                        {lang === 'bn' ? 'নাম (আবশ্যিক)' : 'Name (Req)'}
+                        {lang === 'bn' ? 'পূর্ণ নাম (আবশ্যিক)' : 'Full Name (Req)'}
                       </label>
                       <input
                         type="text"
                         placeholder="e.g. Kamrul Hasan"
                         value={newName}
-                        onChange={(e) => setNewName(e.target.value)}
+                        onChange={(e) => {
+                          setNewName(e.target.value);
+                          if (!newEmailPrefix) {
+                            const suggestedPrefix = e.target.value.toLowerCase().replace(/\s+/g, '.').replace(/[^a-z0-9._-]/g, '');
+                            setNewEmailPrefix(suggestedPrefix);
+                          }
+                        }}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs focus:border-brand-green outline-none font-bold text-slate-800"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
+                        {lang === 'bn' ? 'নাম বাংলায় (ঐচ্ছিক)' : 'Name in Bangla (Optional)'}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="যেমন: কামরুল হাসান"
+                        value={newNameBn}
+                        onChange={(e) => setNewNameBn(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs focus:border-brand-green outline-none font-bold text-slate-800"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
+                        {lang === 'bn' ? 'বিভাগ (Department)' : 'Department'}
+                      </label>
+                      <select
+                        value={newDept}
+                        onChange={(e) => {
+                          const dept = e.target.value;
+                          setNewDept(dept);
+                          const deptBnMap: Record<string, string> = {
+                            Engineering: 'প্রকৌশল',
+                            Design: 'ডিজাইন',
+                            Construction: 'নির্মাণ',
+                            Finance: 'অর্থ ও হিসাব',
+                            Marketing: 'মার্কেটিং'
+                          };
+                          setNewDeptBn(deptBnMap[dept] || 'প্রকৌশল');
+                        }}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs focus:border-brand-green outline-none font-bold text-slate-800 cursor-pointer"
+                      >
+                        <option value="Engineering">{lang === 'bn' ? 'প্রকৌশল (Engineering)' : 'Engineering'}</option>
+                        <option value="Design">{lang === 'bn' ? 'ডিজাইন (Design)' : 'Design'}</option>
+                        <option value="Construction">{lang === 'bn' ? 'নির্মাণ (Construction)' : 'Construction'}</option>
+                        <option value="Finance">{lang === 'bn' ? 'অর্থ ও হিসাব (Finance)' : 'Finance'}</option>
+                        <option value="Marketing">{lang === 'bn' ? 'মার্কেটিং (Marketing)' : 'Marketing'}</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
+                        {lang === 'bn' ? 'পদবী (Designation)' : 'Designation'}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder={lang === 'bn' ? 'যেমন: সাইট ইঞ্জিনিয়ার' : 'e.g. Site Engineer'}
+                        value={newDesignation}
+                        onChange={(e) => {
+                          setNewDesignation(e.target.value);
+                          setNewDesignationBn(e.target.value);
+                        }}
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs focus:border-brand-green outline-none font-bold text-slate-800"
                         required
                       />
@@ -6542,13 +6675,13 @@ export default function Dashboard() {
                       </div>
                     </div>
 
-
-                    <div className="md:col-span-3 flex justify-end pt-2">
+                    <div className="md:col-span-2 flex items-end justify-end pt-2">
                       <button
                         type="submit"
-                        className="bg-brand-green hover:bg-brand-green-dark text-white rounded-xl py-2 px-6 font-bold uppercase tracking-wider text-xs cursor-pointer shadow-sm border-0"
+                        className="bg-brand-green hover:bg-brand-green-dark text-white rounded-xl py-2.5 px-8 font-bold uppercase tracking-wider text-xs cursor-pointer shadow-sm shadow-brand-green/20 border-0 flex items-center gap-2 transition-all active:scale-[0.98]"
                       >
-                        {lang === 'bn' ? 'যোগ করুন' : 'Add Employee'}
+                        <PlusCircle size={15} />
+                        <span>{lang === 'bn' ? 'কর্মকর্তা যোগ করুন' : 'Add Employee'}</span>
                       </button>
                     </div>
                   </form>

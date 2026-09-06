@@ -34,10 +34,16 @@ export interface Employee {
 }
 
 export interface SalaryHistoryRecord {
-  month: string;
-  amount: number;
+  id?: string;
+  month?: string;
+  amount?: number;
   date: string;
-  type: string;
+  type?: string;
+  previousSalary?: number;
+  newSalary?: number;
+  incrementAmount?: number;
+  note?: string;
+  updatedAt?: string;
 }
 
 export const getEmployeesList = (): Employee[] => {
