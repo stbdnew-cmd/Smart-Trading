@@ -1,0 +1,27 @@
+{
+  "name": "স্মার্ট ট্রেডিং শপ (Smart Trading Shop)",
+  "short_name": "Smart Trading",
+  "description": "স্মার্ট ট্রেডিং শপ - ডিজিটাল হাজিরা ও এইচআরএমএস ম্যানেজমেন্ট সিস্টেম",
+  "start_url": "/",
+  "id": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#EE2427",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
