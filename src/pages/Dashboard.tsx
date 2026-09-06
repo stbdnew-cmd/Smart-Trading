@@ -4864,43 +4864,99 @@ export default function Dashboard() {
               <div className="space-y-6 font-sans">
                 
                 {/* ── Stat Cards Grid ── */}
-                <div className="space-y-3 shrink-0">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    
-                    {/* Card 1: Total Employees */}
-                    <div className="bg-white border border-slate-200/80 p-4.5 rounded-2xl shadow-sm flex items-center justify-between gap-3">
-                      <div className="space-y-1 font-sans">
-                        <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">
-                          {lang === 'bn' ? 'মোট কর্মকর্তা' : 'Total Employees'}
-                        </span>
-                        <div className="text-xl sm:text-2xl font-black text-slate-800">
-                          {employeesList.length} <span className="text-xs sm:text-sm font-bold text-slate-500">{lang === 'bn' ? 'জন' : 'persons'}</span>
+                {(() => {
+                  const todayStr = new Date().toISOString().split('T')[0];
+                  let presentCount = 0;
+                  let lateCount = 0;
+                  let pendingCount = 0;
+
+                  employeesList.forEach(emp => {
+                    try {
+                      const raw = localStorage.getItem(`ob_attendance_logs_${emp.id}`);
+                      const empLogs = raw ? JSON.parse(raw) : [];
+                      const todayLog = empLogs.find((l: any) => l.date === todayStr);
+                      if (todayLog && todayLog.checkIn && todayLog.checkIn !== '-') {
+                        if (todayLog.status === 'Late') {
+                          lateCount++;
+                        } else {
+                          presentCount++;
+                        }
+                      } else {
+                        pendingCount++;
+                      }
+                    } catch (e) {}
+                  });
+
+                  return (
+                    <div className="space-y-3 shrink-0">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        
+                        {/* Card 1: Total Employees */}
+                        <div className="bg-white border border-slate-200/80 p-4 rounded-2xl shadow-sm flex items-center justify-between gap-2">
+                          <div className="space-y-0.5 font-sans">
+                            <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">
+                              {lang === 'bn' ? 'মোট কর্মকর্তা' : 'Total Staff'}
+                            </span>
+                            <div className="text-xl sm:text-2xl font-black text-slate-800">
+                              {employeesList.length} <span className="text-xs font-bold text-slate-500">{lang === 'bn' ? 'জন' : ''}</span>
+                            </div>
+                          </div>
+                          <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl shrink-0">
+                            <Users className="w-5 h-5" />
+                          </div>
                         </div>
-                      </div>
-                      <div className="p-3 bg-brand-green/10 text-brand-green rounded-xl shrink-0">
-                        <Users className="w-5 h-5 sm:w-6 sm:h-6" />
+
+                        {/* Card 2: Today Present */}
+                        <div className="bg-white border border-slate-200/80 p-4 rounded-2xl shadow-sm flex items-center justify-between gap-2">
+                          <div className="space-y-0.5 font-sans">
+                            <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">
+                              {lang === 'bn' ? 'উপস্থিত (আজকে)' : 'Present Today'}
+                            </span>
+                            <div className="text-xl sm:text-2xl font-black text-emerald-600">
+                              {presentCount} <span className="text-xs font-bold text-emerald-600">{lang === 'bn' ? 'জন' : ''}</span>
+                            </div>
+                          </div>
+                          <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl shrink-0">
+                            <CheckCircle2 className="w-5 h-5" />
+                          </div>
+                        </div>
+
+                        {/* Card 3: Today Late */}
+                        <div className="bg-white border border-slate-200/80 p-4 rounded-2xl shadow-sm flex items-center justify-between gap-2">
+                          <div className="space-y-0.5 font-sans">
+                            <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">
+                              {lang === 'bn' ? 'বিলম্ব হাজিরা' : 'Late Today'}
+                            </span>
+                            <div className="text-xl sm:text-2xl font-black text-amber-600">
+                              {lateCount} <span className="text-xs font-bold text-amber-600">{lang === 'bn' ? 'জন' : ''}</span>
+                            </div>
+                          </div>
+                          <div className="p-2.5 bg-amber-50 text-amber-600 rounded-xl shrink-0">
+                            <Clock className="w-5 h-5" />
+                          </div>
+                        </div>
+
+                        {/* Card 4: Pending Entry */}
+                        <div className="bg-white border border-slate-200/80 p-4 rounded-2xl shadow-sm flex items-center justify-between gap-2">
+                          <div className="space-y-0.5 font-sans">
+                            <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">
+                              {lang === 'bn' ? 'হাজিরা বাকি' : 'Pending Entry'}
+                            </span>
+                            <div className="text-xl sm:text-2xl font-black text-slate-500">
+                              {pendingCount} <span className="text-xs font-bold text-slate-400">{lang === 'bn' ? 'জন' : ''}</span>
+                            </div>
+                          </div>
+                          <div className="p-2.5 bg-slate-100 text-slate-500 rounded-xl shrink-0">
+                            <AlertCircle className="w-5 h-5" />
+                          </div>
+                        </div>
+
                       </div>
                     </div>
+                  );
+                })()}
 
-                    {/* Card 2: Total Salary Due */}
-                    <div className="bg-white border border-slate-200/80 p-4.5 rounded-2xl shadow-sm flex items-center justify-between gap-3">
-                      <div className="space-y-1 font-sans">
-                        <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">
-                          {lang === 'bn' ? 'মোট বকেয়া বেতন' : 'Total Salary Due'}
-                        </span>
-                        <div className="text-xl sm:text-2xl font-black text-brand-gold font-sans">
-                          ৳{totalSalaryDue.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}
-                        </div>
-                      </div>
-                      <div className="p-3 bg-brand-gold/10 text-brand-gold rounded-xl shrink-0">
-                        <Wallet className="w-5 h-5 sm:w-6 sm:h-6" />
-                      </div>
-                    </div>
-
-                  </div>
-                </div>
-
-                                {/* Quick Access Shortcuts Panel */}
+                {/* Quick Access Shortcuts Panel */}
                 {quickAccessItems.length > 0 && (
                   <div className="space-y-2.5 px-1 pb-1 font-sans">
                     <span className="flex items-center gap-1.5 text-[9.5px] font-extrabold text-slate-400 uppercase tracking-wider">
@@ -4937,21 +4993,34 @@ export default function Dashboard() {
                     <div className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-sm flex flex-col">
                       <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center shrink-0">
                         <div className="flex items-center gap-2">
-                          <Users size={18} className="text-brand-gold" />
+                          <Users size={18} className="text-brand-green" />
                           <span className="font-extrabold text-slate-800 text-xs uppercase tracking-wider">
                             {lang === 'bn' ? 'কর্মকর্তাদের আজকের উপস্থিতি' : "Today's Attendance Status"}
                           </span>
                         </div>
+                        <span className="text-[10px] text-slate-500 bg-white border border-slate-200 px-2.5 py-1 rounded-full font-bold">
+                          {new Date().toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </span>
                       </div>
 
                       {/* Mobile Responsive Cards View (md:hidden) */}
                       <div className="md:hidden divide-y divide-slate-100">
-                        {filteredEmployees.map((emp, index) => {
-                          const isCheck = index < 4;
-                          const isLt = index === 1;
-                          const isAb = index === 4;
-                          const currentYM = new Date().toISOString().substring(0, 7);
-                          const staffSalary = calculateMonthlySalary(emp, currentYM, holidaysList);
+                        {filteredEmployees.map((emp) => {
+                          const todayStr = new Date().toISOString().split('T')[0];
+                          let todayLog: any = null;
+                          try {
+                            const raw = localStorage.getItem(`ob_attendance_logs_${emp.id}`);
+                            const empLogs = raw ? JSON.parse(raw) : [];
+                            todayLog = empLogs.find((l: any) => l.date === todayStr);
+                          } catch(e) {}
+
+                          const inTime = todayLog?.checkIn && todayLog.checkIn !== '-' ? todayLog.checkIn : '';
+                          const outTime = todayLog?.checkOut && todayLog.checkOut !== '-' ? todayLog.checkOut : '';
+                          const hasIn = !!inTime;
+                          const hasOut = !!outTime;
+                          const isLate = todayLog?.status === 'Late';
+                          const isAbsent = todayLog?.status === 'Absent';
+                          const isLeave = todayLog?.status === 'Leave';
 
                           return (
                             <div key={emp.id} className="p-3.5 space-y-2.5 hover:bg-slate-50/60 transition-colors">
@@ -4976,33 +5045,45 @@ export default function Dashboard() {
                                   </div>
                                 </div>
 
-                                <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold shrink-0 ${
-                                  isAb 
-                                    ? 'bg-red-50 text-red-600 border border-red-100' 
-                                    : isLt 
-                                      ? 'bg-amber-50 text-amber-600 border border-amber-100' 
-                                      : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                                <span className={`inline-flex px-2 py-0.5 rounded-full text-[9.5px] font-bold shrink-0 ${
+                                  isAbsent 
+                                    ? 'bg-rose-50 text-rose-600 border border-rose-200' 
+                                    : isLeave 
+                                      ? 'bg-blue-50 text-blue-600 border border-blue-200'
+                                      : isLate 
+                                        ? 'bg-amber-50 text-amber-700 border border-amber-200' 
+                                        : hasIn
+                                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                          : 'bg-slate-100 text-slate-500 border border-slate-200'
                                 }`}>
-                                  {isAb 
+                                  {isAbsent 
                                     ? (lang === 'bn' ? 'অনুপস্থিত' : 'Absent') 
-                                    : isLt 
-                                      ? (lang === 'bn' ? 'বিলম্বে' : 'Late') 
-                                      : (lang === 'bn' ? 'উপস্থিত' : 'Present')}
+                                    : isLeave 
+                                      ? (lang === 'bn' ? 'ছুটি' : 'Leave')
+                                      : isLate 
+                                        ? (lang === 'bn' ? 'বিলম্বে (Late)' : 'Late') 
+                                        : hasIn
+                                          ? (lang === 'bn' ? 'উপস্থিত' : 'Present')
+                                          : (lang === 'bn' ? 'হাজিরা বাকি' : 'Pending')}
                                 </span>
                               </div>
 
-                              <div className="grid grid-cols-3 gap-2 bg-slate-50/80 p-2 rounded-xl border border-slate-100 text-[10.5px]">
+                              <div className="grid grid-cols-3 gap-2 bg-slate-50/80 p-2.5 rounded-xl border border-slate-100 text-[10.5px]">
                                 <div className="space-y-0.5">
-                                  <span className="text-slate-400 text-[9px] font-bold block uppercase">{lang === 'bn' ? 'প্রবেশ' : 'In'}</span>
-                                  <span className="font-mono font-bold text-slate-800">{isCheck ? (isLt ? '09:12 AM' : '08:52 AM') : '-'}</span>
+                                  <span className="text-slate-400 text-[9px] font-bold block uppercase">{lang === 'bn' ? 'নির্ধারিত শিফট' : 'Shift'}</span>
+                                  <span className="font-mono font-bold text-slate-700">{emp.shiftStartTime || '09:00 AM'}</span>
                                 </div>
                                 <div className="space-y-0.5">
-                                  <span className="text-slate-400 text-[9px] font-bold block uppercase">{lang === 'bn' ? 'মূল বেতন' : 'Basic'}</span>
-                                  <span className="font-bold text-slate-700 font-sans">৳{emp.baseSalary ? emp.baseSalary.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') : '0'}</span>
+                                  <span className="text-slate-400 text-[9px] font-bold block uppercase">{lang === 'bn' ? 'প্রবেশ (In)' : 'Check In'}</span>
+                                  <span className={`font-mono font-bold ${hasIn ? (isLate ? 'text-amber-600' : 'text-emerald-700') : 'text-slate-400'}`}>
+                                    {inTime || '-'}
+                                  </span>
                                 </div>
                                 <div className="space-y-0.5">
-                                  <span className="text-slate-400 text-[9px] font-bold block uppercase">{lang === 'bn' ? 'চলতি প্রদেয়' : 'Payable'}</span>
-                                  <span className="font-black text-brand-green font-sans">৳{staffSalary.netPayable.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</span>
+                                  <span className="text-slate-400 text-[9px] font-bold block uppercase">{lang === 'bn' ? 'প্রস্থান (Out)' : 'Check Out'}</span>
+                                  <span className="font-mono font-bold text-slate-700">
+                                    {outTime || (hasIn ? (lang === 'bn' ? 'চলমান' : 'Active') : '-')}
+                                  </span>
                                 </div>
                               </div>
                             </div>
@@ -5016,19 +5097,28 @@ export default function Dashboard() {
                           <thead className="bg-slate-50 sticky top-0 font-bold text-slate-500 uppercase tracking-wider text-[9px] border-b border-slate-100">
                             <tr>
                               <th className="px-5 py-3.5">{lang === 'bn' ? 'নাম ও পদবি' : 'Employee'}</th>
-                              <th className="px-3 py-3.5">{lang === 'bn' ? 'প্রবেশ সময়' : 'In Time'}</th>
-                              <th className="px-3 py-3.5">{lang === 'bn' ? 'মূল বেতন (Basic)' : 'Basic Salary'}</th>
-                              <th className="px-3 py-3.5">{lang === 'bn' ? 'চলতি প্রদেয়' : 'Net Payable'}</th>
-                              <th className="px-5 py-3.5 text-right">{lang === 'bn' ? 'অবস্থা' : 'Status'}</th>
+                              <th className="px-3 py-3.5">{lang === 'bn' ? 'নির্ধারিত শিফট' : 'Shift Time'}</th>
+                              <th className="px-3 py-3.5">{lang === 'bn' ? 'প্রবেশ সময় (In)' : 'Check-In'}</th>
+                              <th className="px-3 py-3.5">{lang === 'bn' ? 'প্রস্থান সময় (Out)' : 'Check-Out'}</th>
+                              <th className="px-5 py-3.5 text-right">{lang === 'bn' ? 'হাজিরা অবস্থা' : 'Status'}</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100 text-slate-650">
-                            {filteredEmployees.map((emp, index) => {
-                              const isCheck = index < 4;
-                              const isLt = index === 1;
-                              const isAb = index === 4;
-                              const currentYM = new Date().toISOString().substring(0, 7);
-                              const staffSalary = calculateMonthlySalary(emp, currentYM, holidaysList);
+                            {filteredEmployees.map((emp) => {
+                              const todayStr = new Date().toISOString().split('T')[0];
+                              let todayLog: any = null;
+                              try {
+                                const raw = localStorage.getItem(`ob_attendance_logs_${emp.id}`);
+                                const empLogs = raw ? JSON.parse(raw) : [];
+                                todayLog = empLogs.find((l: any) => l.date === todayStr);
+                              } catch(e) {}
+
+                              const inTime = todayLog?.checkIn && todayLog.checkIn !== '-' ? todayLog.checkIn : '';
+                              const outTime = todayLog?.checkOut && todayLog.checkOut !== '-' ? todayLog.checkOut : '';
+                              const hasIn = !!inTime;
+                              const isLate = todayLog?.status === 'Late';
+                              const isAbsent = todayLog?.status === 'Absent';
+                              const isLeave = todayLog?.status === 'Leave';
 
                               return (
                                 <tr key={emp.id} className="hover:bg-slate-50/40 transition-colors">
@@ -5040,28 +5130,38 @@ export default function Dashboard() {
                                       <span>{lang === 'bn' ? emp.designationBn : emp.designation}</span>
                                     </div>
                                   </td>
-                                  <td className="px-3 py-3.5 font-medium whitespace-nowrap">
-                                    {isCheck ? (isLt ? '09:12 AM' : '08:52 AM') : '-'}
+                                  <td className="px-3 py-3.5 font-mono font-bold text-slate-600 whitespace-nowrap">
+                                    {emp.shiftStartTime || '09:00 AM'}
                                   </td>
-                                  <td className="px-3 py-3.5 font-bold text-slate-700 whitespace-nowrap font-sans">
-                                    ৳{emp.baseSalary ? emp.baseSalary.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') : '0'}
+                                  <td className="px-3 py-3.5 font-mono font-bold whitespace-nowrap">
+                                    <span className={hasIn ? (isLate ? 'text-amber-600' : 'text-emerald-700') : 'text-slate-400'}>
+                                      {inTime || '-'}
+                                    </span>
                                   </td>
-                                  <td className="px-3 py-3.5 font-extrabold text-brand-green whitespace-nowrap font-sans">
-                                    ৳{staffSalary.netPayable.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}
+                                  <td className="px-3 py-3.5 font-mono font-bold text-slate-600 whitespace-nowrap">
+                                    {outTime || (hasIn ? <span className="text-emerald-600 text-[11px] font-bold font-sans">{lang === 'bn' ? 'ডিউটিতে আছেন' : 'Active'}</span> : '-')}
                                   </td>
                                   <td className="px-5 py-3.5 text-right whitespace-nowrap">
-                                    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[9px] font-bold ${
-                                      isAb 
-                                        ? 'bg-red-50 text-red-600 border border-red-100' 
-                                        : isLt 
-                                          ? 'bg-amber-50 text-amber-600 border border-amber-100' 
-                                          : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                                    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[9.5px] font-bold ${
+                                      isAbsent 
+                                        ? 'bg-rose-50 text-rose-600 border border-rose-200' 
+                                        : isLeave 
+                                          ? 'bg-blue-50 text-blue-600 border border-blue-200'
+                                          : isLate 
+                                            ? 'bg-amber-50 text-amber-700 border border-amber-200' 
+                                            : hasIn
+                                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                              : 'bg-slate-100 text-slate-500 border border-slate-200'
                                     }`}>
-                                      {isAb 
+                                      {isAbsent 
                                         ? (lang === 'bn' ? 'অনুপস্থিত' : 'Absent') 
-                                        : isLt 
-                                          ? (lang === 'bn' ? 'বিলম্বে' : 'Late') 
-                                          : (lang === 'bn' ? 'উপস্থিত' : 'Present')}
+                                        : isLeave 
+                                          ? (lang === 'bn' ? 'ছুটি' : 'Leave')
+                                          : isLate 
+                                            ? (lang === 'bn' ? 'বিলম্বে (Late)' : 'Late') 
+                                            : hasIn
+                                              ? (lang === 'bn' ? 'উপস্থিত' : 'Present')
+                                              : (lang === 'bn' ? 'হাজিরা বাকি' : 'Pending')}
                                     </span>
                                   </td>
                                 </tr>
