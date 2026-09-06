@@ -367,8 +367,6 @@ export default function Dashboard() {
   const [editNameBn, setEditNameBn] = useState('');
   const [editDesignation, setEditDesignation] = useState('');
   const [editDesignationBn, setEditDesignationBn] = useState('');
-  const [editDept, setEditDept] = useState('Sales & Retail');
-  const [editDeptBn, setEditDeptBn] = useState('বিক্রয় ও রিটেল');
   const [editEmail, setEditEmail] = useState('');
   const [editEmailPrefix, setEditEmailPrefix] = useState('');
   const [editSalary, setEditSalary] = useState('30000');
@@ -386,7 +384,6 @@ export default function Dashboard() {
   
   // Admin Panel States
   const [employeesList, setEmployeesList] = useState<Employee[]>(() => getEmployeesList());
-  const [selectedDept, setSelectedDept] = useState<string>('All');
   const [paidStatus, setPaidStatus] = useState<Record<string, boolean>>({});
 
   // Holiday Configuration States
@@ -407,8 +404,6 @@ export default function Dashboard() {
   const [newName, setNewName] = useState('');
   const [newNameBn, setNewNameBn] = useState('');
   const [newEmailPrefix, setNewEmailPrefix] = useState('');
-  const [newDept, setNewDept] = useState('Sales & Retail');
-  const [newDeptBn, setNewDeptBn] = useState('বিক্রয় ও রিটেল');
   const [newDesignation, setNewDesignation] = useState('Sales Executive');
   const [newDesignationBn, setNewDesignationBn] = useState('সেলস এক্সিকিউটিভ');
   const [newSalary, setNewSalary] = useState('30000');
@@ -631,8 +626,6 @@ export default function Dashboard() {
         setEditNameBn(emp.nameBn || emp.name);
         setEditDesignation(emp.designation);
         setEditDesignationBn(emp.designationBn || emp.designation);
-        setEditDept(emp.dept);
-        setEditDeptBn(emp.deptBn || emp.dept);
         setEditEmail(emp.email);
         setEditEmailPrefix(emp.email.replace(/@smarttrading\.com$/i, ''));
         setEditSalary(String(emp.baseSalary));
@@ -1701,15 +1694,6 @@ export default function Dashboard() {
       return;
     }
 
-    const deptBnMap: Record<string, string> = {
-      'Sales & Retail': 'বিক্রয় ও রিটেল',
-      'Showroom & Shop': 'শপ ও শোরুম',
-      'Accounts & Finance': 'হিসাব ও অর্থ',
-      'Inventory & Stock': 'ইনভেন্টরি ও গোডাউন',
-      'Management': 'ব্যবস্থাপনা',
-      'Customer Service': 'গ্রাহক সেবা'
-    };
-
     const newEmp: Employee = {
       id: cleanId,
       email: cleanEmail,
@@ -1717,8 +1701,6 @@ export default function Dashboard() {
       nameBn: cleanNameBn,
       designation: finalDesignation,
       designationBn: finalDesignationBn,
-      dept: newDept,
-      deptBn: deptBnMap[newDept] || 'বিক্রয় ও রিটেল',
       baseSalary: salaryVal,
       joiningDate: joiningDateVal,
       shiftStartTime: shiftTimeVal,
@@ -1749,8 +1731,6 @@ export default function Dashboard() {
     setNewName('');
     setNewNameBn('');
     setNewEmailPrefix('');
-    setNewDept('Sales & Retail');
-    setNewDeptBn('বিক্রয় ও রিটেল');
     setNewDesignation('Sales Executive');
     setNewDesignationBn('সেলস এক্সিকিউটিভ');
     setNewSalary('30000');
@@ -1799,15 +1779,6 @@ export default function Dashboard() {
     const cleanPrefix = editEmailPrefix.trim().replace(/@.*$/, '');
     const fullEmail = cleanPrefix ? `${cleanPrefix}@smarttrading.com` : editEmail;
 
-    const deptBnMap: Record<string, string> = {
-      'Sales & Retail': 'বিক্রয় ও রিটেল',
-      'Showroom & Shop': 'শপ ও শোরুম',
-      'Accounts & Finance': 'হিসাব ও অর্থ',
-      'Inventory & Stock': 'ইনভেন্টরি ও গোডাউন',
-      'Management': 'ব্যবস্থাপনা',
-      'Customer Service': 'গ্রাহক সেবা'
-    };
-
     const newSalaryVal = parseInt(editSalary) || 0;
 
     const updated = employeesList.map(emp => {
@@ -1833,8 +1804,6 @@ export default function Dashboard() {
           nameBn: editNameBn.trim() || editName.trim(),
           designation: editDesignation.trim() || emp.designation,
           designationBn: editDesignationBn.trim() || editDesignation.trim() || emp.designationBn,
-          dept: editDept || emp.dept,
-          deptBn: deptBnMap[editDept] || editDeptBn || emp.deptBn,
           email: fullEmail,
           baseSalary: newSalaryVal,
           deductions: emp.deductions || 0,
@@ -2538,9 +2507,7 @@ export default function Dashboard() {
                               </span>
                             </div>
                             <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-500 flex-wrap">
-                              <span>{lang === 'bn' ? (latestEmp.designationBn || latestEmp.designation) : latestEmp.designation}</span>
-                              <span>•</span>
-                              <span>{lang === 'bn' ? (latestEmp.deptBn || latestEmp.dept) : latestEmp.dept}</span>
+                              <span className="font-semibold text-slate-700">{lang === 'bn' ? (latestEmp.designationBn || latestEmp.designation) : latestEmp.designation}</span>
                               <span>•</span>
                               <span className="font-medium text-slate-600 font-mono">
                                 {lang === 'bn' ? `শিফট: ${latestEmp.shiftStartTime || '০৯:০০'}` : `Shift: ${latestEmp.shiftStartTime || '09:00'}`}
@@ -2918,15 +2885,6 @@ export default function Dashboard() {
                               {currentEmployee 
                                 ? (lang === 'bn' ? currentEmployee.designationBn : currentEmployee.designation) 
                                 : (lang === 'bn' ? 'প্রধান প্রশাসক' : 'System Admin')}
-                            </span>
-                          </div>
-
-                          <div className="space-y-1">
-                            <span className="text-slate-400 block font-bold uppercase text-[9px]">{lang === 'bn' ? 'বিভাগ (Department)' : 'Department'}</span>
-                            <span className="font-bold text-slate-700 text-xs block">
-                              {currentEmployee 
-                                ? (lang === 'bn' ? currentEmployee.deptBn : currentEmployee.dept) 
-                                : (lang === 'bn' ? 'আইটি ও ম্যানেজমেন্ট' : 'IT & Management')}
                             </span>
                           </div>
 
@@ -5926,34 +5884,6 @@ export default function Dashboard() {
                           </div>
 
                           <div>
-                            <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{lang === 'bn' ? 'বিভাগ (Department)' : 'Department'}</label>
-                            <select
-                              value={editDept}
-                              onChange={(e) => {
-                                const dept = e.target.value;
-                                setEditDept(dept);
-                                const deptBnMap: Record<string, string> = {
-                                  'Sales & Retail': 'বিক্রয় ও রিটেল',
-                                  'Showroom & Shop': 'শপ ও শোরুম',
-                                  'Accounts & Finance': 'হিসাব ও অর্থ',
-                                  'Inventory & Stock': 'ইনভেন্টরি ও গোডাউন',
-                                  'Management': 'ব্যবস্থাপনা',
-                                  'Customer Service': 'গ্রাহক সেবা'
-                                };
-                                setEditDeptBn(deptBnMap[dept] || 'বিক্রয় ও রিটেল');
-                              }}
-                              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:border-brand-green outline-none font-bold text-slate-800 cursor-pointer"
-                            >
-                              <option value="Sales & Retail">{lang === 'bn' ? 'বিক্রয় ও রিটেল (Sales & Retail)' : 'Sales & Retail'}</option>
-                              <option value="Showroom & Shop">{lang === 'bn' ? 'শপ ও শোরুম (Showroom & Shop)' : 'Showroom & Shop'}</option>
-                              <option value="Accounts & Finance">{lang === 'bn' ? 'হিসাব ও অর্থ (Accounts & Finance)' : 'Accounts & Finance'}</option>
-                              <option value="Inventory & Stock">{lang === 'bn' ? 'ইনভেন্টরি ও গোডাউন (Inventory & Stock)' : 'Inventory & Stock'}</option>
-                              <option value="Management">{lang === 'bn' ? 'ব্যবস্থাপনা (Management)' : 'Management'}</option>
-                              <option value="Customer Service">{lang === 'bn' ? 'গ্রাহক সেবা (Customer Service)' : 'Customer Service'}</option>
-                            </select>
-                          </div>
-
-                          <div>
                             <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{lang === 'bn' ? 'পদবী (Designation)' : 'Designation'}</label>
                             <input
                               type="text"
@@ -6503,36 +6433,6 @@ export default function Dashboard() {
 
                     <div>
                       <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
-                        {lang === 'bn' ? 'বিভাগ (Department)' : 'Department'}
-                      </label>
-                      <select
-                        value={newDept}
-                        onChange={(e) => {
-                          const dept = e.target.value;
-                          setNewDept(dept);
-                          const deptBnMap: Record<string, string> = {
-                            'Sales & Retail': 'বিক্রয় ও রিটেল',
-                            'Showroom & Shop': 'শপ ও শোরুম',
-                            'Accounts & Finance': 'হিসাব ও অর্থ',
-                            'Inventory & Stock': 'ইনভেন্টরি ও গোডাউন',
-                            'Management': 'ব্যবস্থাপনা',
-                            'Customer Service': 'গ্রাহক সেবা'
-                          };
-                          setNewDeptBn(deptBnMap[dept] || 'বিক্রয় ও রিটেল');
-                        }}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs focus:border-brand-green outline-none font-bold text-slate-800 cursor-pointer"
-                      >
-                        <option value="Sales & Retail">{lang === 'bn' ? 'বিক্রয় ও রিটেল (Sales & Retail)' : 'Sales & Retail'}</option>
-                        <option value="Showroom & Shop">{lang === 'bn' ? 'শপ ও শোরুম (Showroom & Shop)' : 'Showroom & Shop'}</option>
-                        <option value="Accounts & Finance">{lang === 'bn' ? 'হিসাব ও অর্থ (Accounts & Finance)' : 'Accounts & Finance'}</option>
-                        <option value="Inventory & Stock">{lang === 'bn' ? 'ইনভেন্টরি ও গোডাউন (Inventory & Stock)' : 'Inventory & Stock'}</option>
-                        <option value="Management">{lang === 'bn' ? 'ব্যবস্থাপনা (Management)' : 'Management'}</option>
-                        <option value="Customer Service">{lang === 'bn' ? 'গ্রাহক সেবা (Customer Service)' : 'Customer Service'}</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
                         {lang === 'bn' ? 'পদবী (Designation)' : 'Designation'}
                       </label>
                       <input
@@ -6765,36 +6665,6 @@ export default function Dashboard() {
                         onChange={(e) => setNewNameBn(e.target.value)}
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs focus:border-brand-green outline-none font-bold text-slate-800"
                       />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
-                        {lang === 'bn' ? 'বিভাগ (Department)' : 'Department'}
-                      </label>
-                      <select
-                        value={newDept}
-                        onChange={(e) => {
-                          const dept = e.target.value;
-                          setNewDept(dept);
-                          const deptBnMap: Record<string, string> = {
-                            'Sales & Retail': 'বিক্রয় ও রিটেল',
-                            'Showroom & Shop': 'শপ ও শোরুম',
-                            'Accounts & Finance': 'হিসাব ও অর্থ',
-                            'Inventory & Stock': 'ইনভেন্টরি ও গোডাউন',
-                            'Management': 'ব্যবস্থাপনা',
-                            'Customer Service': 'গ্রাহক সেবা'
-                          };
-                          setNewDeptBn(deptBnMap[dept] || 'বিক্রয় ও রিটেল');
-                        }}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs focus:border-brand-green outline-none font-bold text-slate-800 cursor-pointer"
-                      >
-                        <option value="Sales & Retail">{lang === 'bn' ? 'বিক্রয় ও রিটেল (Sales & Retail)' : 'Sales & Retail'}</option>
-                        <option value="Showroom & Shop">{lang === 'bn' ? 'শপ ও শোরুম (Showroom & Shop)' : 'Showroom & Shop'}</option>
-                        <option value="Accounts & Finance">{lang === 'bn' ? 'হিসাব ও অর্থ (Accounts & Finance)' : 'Accounts & Finance'}</option>
-                        <option value="Inventory & Stock">{lang === 'bn' ? 'ইনভেন্টরি ও গোডাউন (Inventory & Stock)' : 'Inventory & Stock'}</option>
-                        <option value="Management">{lang === 'bn' ? 'ব্যবস্থাপনা (Management)' : 'Management'}</option>
-                        <option value="Customer Service">{lang === 'bn' ? 'গ্রাহক সেবা (Customer Service)' : 'Customer Service'}</option>
-                      </select>
                     </div>
 
                     <div>
