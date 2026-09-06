@@ -495,6 +495,20 @@ export default function Dashboard() {
     }
   }, []);
 
+  // Premium Punch Confirmation Modal (OurBuilders ERP Style)
+  const [punchSuccessData, setPunchSuccessData] = useState<{
+    isOpen: boolean;
+    type: 'checkin' | 'checkout';
+    time: string;
+    date: string;
+    status: 'On-Time' | 'Late' | 'Checkout';
+    statusBn: string;
+    empName: string;
+    empId: string;
+    location: string;
+    note?: string;
+  } | null>(null);
+
   // Premium Custom Confirmation & Alert Modal State
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -1166,10 +1180,19 @@ export default function Dashboard() {
     setLogs(updatedLogs);
     setTodayCheckedIn(true);
     setAttendanceVersion(v => v + 1);
-    showAlertDialog({
-      type: 'success',
-      title: lang === 'bn' ? 'হাজিরা সম্পন্ন' : 'Check-In Successful',
-      message: lang === 'bn' ? `উপস্থিতি সফলভাবে গৃহীত হয়েছে! (${statusBn})` : `Attendance checked in successfully! (${status})`
+    
+    // Trigger OurBuilders ERP Style Punch Modal
+    setPunchSuccessData({
+      isOpen: true,
+      type: 'checkin',
+      time: nowTimeStr,
+      date: todayStr,
+      status: isLate ? 'Late' : 'On-Time',
+      statusBn,
+      empName: lang === 'bn' ? (currentEmployee.nameBn || currentEmployee.name) : currentEmployee.name,
+      empId: currentEmployee.id,
+      location: lang === 'bn' ? 'স্মার্ট ট্রেডিং শপ' : 'Smart Trading Shop',
+      note: isLate ? (lang === 'bn' ? 'দেরিতে প্রবেশের কারণে হাজিরা বিলম্ব হিসেবে রেকর্ড হয়েছে।' : 'Late entry recorded.') : (lang === 'bn' ? 'সময়মতো অফিসে উপস্থিত হওয়ার জন্য ধন্যবাদ!' : 'Thank you for arriving on time!')
     });
   };
 
@@ -1194,10 +1217,19 @@ export default function Dashboard() {
     setLogs(updatedLogs);
     setTodayCheckedOut(true);
     setAttendanceVersion(v => v + 1);
-    showAlertDialog({
-      type: 'success',
-      title: lang === 'bn' ? 'প্রস্থান সম্পন্ন' : 'Check-Out Recorded',
-      message: lang === 'bn' ? `আপনার প্রস্থান সময় (${nowTimeStr}) সফলভাবে সংরক্ষিত হয়েছে।` : `Check-out recorded at ${nowTimeStr}.`
+
+    // Trigger OurBuilders ERP Style Punch Modal
+    setPunchSuccessData({
+      isOpen: true,
+      type: 'checkout',
+      time: nowTimeStr,
+      date: todayStr,
+      status: 'Checkout',
+      statusBn: lang === 'bn' ? 'প্রস্থান সম্পন্ন' : 'Checked Out',
+      empName: lang === 'bn' ? (currentEmployee.nameBn || currentEmployee.name) : currentEmployee.name,
+      empId: currentEmployee.id,
+      location: lang === 'bn' ? 'স্মার্ট ট্রেডিং শপ' : 'Smart Trading Shop',
+      note: lang === 'bn' ? 'আজকের দিনের শিফট সফলভাবে সমাপ্ত হয়েছে। শুভকামনা!' : 'Today\'s shift completed successfully. Have a great evening!'
     });
   };
 
@@ -4075,7 +4107,105 @@ export default function Dashboard() {
                 {activeTab === 'dashboard' ? (
                   /* Employee Dashboard Main Tab */
                   <div className="space-y-6">
-                    {/* ── Live Attendance Punch Card (OurBuilders ERP Style) ── */}
+                    {/* ── 1ST: Staff Salary & Payment Status Card (কত টাকা পাবে, পাইছে, বাকি) ── */}
+                    {(() => {
+                      const latestEmp = employeesList.find(e => e.id === currentEmployee.id) || currentEmployee;
+                      const currentYM = new Date().toISOString().substring(0, 7);
+                      const salaryCalc = calculateMonthlySalary(latestEmp, currentYM, holidaysList);
+                      const isPaidThisMonth = loadPaymentStatus(latestEmp.id, currentYM);
+                      const advanceTaken = latestEmp.advanceSalary || 0;
+
+                      return (
+                        <div className="bg-white border border-slate-200/80 rounded-3xl p-5 sm:p-6 shadow-sm font-sans space-y-4 max-w-xl mx-auto w-full">
+                          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 pb-3 border-b border-slate-100">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-10 h-10 rounded-2xl bg-brand-green/10 text-brand-green flex items-center justify-center shrink-0">
+                                <Wallet size={20} />
+                              </div>
+                              <div>
+                                <h4 className="font-extrabold text-slate-800 text-sm sm:text-base leading-tight">
+                                  {lang === 'bn' ? 'আমার মাসিক বেতন ও হিসাব' : 'My Monthly Salary & Balance'}
+                                </h4>
+                                <p className="text-[10.5px] text-slate-400 font-medium mt-0.5">
+                                  {lang === 'bn' 
+                                    ? `${latestEmp.nameBn || latestEmp.name} (আইডি: ${latestEmp.id}) • চলতি মাস` 
+                                    : `${latestEmp.name} (ID: ${latestEmp.id}) • Current Month`}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 self-start sm:self-auto">
+                              <span className={`px-3 py-1 rounded-full text-[10.5px] font-bold border ${
+                                isPaidThisMonth 
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                                  : 'bg-amber-50 text-amber-700 border-amber-200'
+                              }`}>
+                                {isPaidThisMonth ? (lang === 'bn' ? '✓ পরিশোধিত (Paid)' : '✓ Paid') : (lang === 'bn' ? '⏳ প্রদেয় বাকি (Unpaid)' : '⏳ Due/Unpaid')}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => navigate('/dashboard?tab=salary')}
+                                className="text-xs font-bold text-brand-green hover:underline cursor-pointer bg-transparent border-0 flex items-center gap-1"
+                              >
+                                <span>{lang === 'bn' ? 'পে-স্লিপ' : 'Payslip'}</span>
+                                <ArrowRight size={11} />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Salary Key Figures Grid */}
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                            {/* Basic Salary */}
+                            <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                              <span className="text-[9.5px] text-slate-400 font-bold block mb-0.5">{lang === 'bn' ? 'চুক্তির মূল বেতন:' : 'Basic Salary:'}</span>
+                              <div className="font-black text-slate-800 text-base font-sans">
+                                ৳{salaryCalc.baseSalary.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}
+                              </div>
+                              <span className="text-[8.5px] text-slate-400 font-medium">{lang === 'bn' ? 'স্থায়ী চুক্তি' : 'Contract'}</span>
+                            </div>
+
+                            {/* Overtime & Bonus */}
+                            <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                              <span className="text-[9.5px] text-slate-400 font-bold block mb-0.5">{lang === 'bn' ? 'ওভারটাইম ও বোনাস:' : 'OT & Bonus:'}</span>
+                              <div className="font-black text-emerald-600 text-base font-sans">
+                                + ৳{(salaryCalc.otPay + salaryCalc.fridayBonus).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}
+                              </div>
+                              <span className="text-[8.5px] text-emerald-600 font-medium">+{toBnDigits(salaryCalc.otHours)}h {lang === 'bn' ? 'ওভারটাইম' : 'OT'}</span>
+                            </div>
+
+                            {/* Advance Taken */}
+                            <div className="bg-rose-50/60 p-3 rounded-2xl border border-rose-100">
+                              <span className="text-[9.5px] text-rose-600 font-bold block mb-0.5">{lang === 'bn' ? 'অগ্রিম গ্রহণ (Advance):' : 'Advance Taken:'}</span>
+                              <div className="font-black text-rose-600 text-base font-sans">
+                                ৳{advanceTaken.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}
+                              </div>
+                              <span className="text-[8.5px] text-rose-500 font-medium">
+                                {advanceTaken > 0 ? (lang === 'bn' ? 'বেতন থেকে কর্তন' : 'Deducted') : (lang === 'bn' ? 'কোনো অগ্রিম নেই' : 'No Advance')}
+                              </span>
+                            </div>
+
+                            {/* Net Payable / Due */}
+                            <div className="bg-emerald-500/10 p-3 rounded-2xl border border-emerald-300">
+                              <span className="text-[9.5px] text-emerald-800 font-bold block mb-0.5">
+                                {isPaidThisMonth 
+                                  ? (lang === 'bn' ? 'পরিশোধিত বেতন:' : 'Paid Salary:') 
+                                  : (lang === 'bn' ? 'প্রদেয় মোট বেতন:' : 'Net Payable:')}
+                              </span>
+                              <div className="font-black text-brand-green text-lg font-sans">
+                                ৳{salaryCalc.netPayable.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}
+                              </div>
+                              <span className="text-[8.5px] text-emerald-700 font-bold">
+                                {isPaidThisMonth 
+                                  ? (lang === 'bn' ? 'পরিশোধ সম্পন্ন' : 'Paid in full') 
+                                  : (lang === 'bn' ? 'পাওনা বাকি রয়েছে' : 'Balance to receive')}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* ── 2ND: Live Attendance Punch Card (OurBuilders ERP Style) ── */}
                     {(() => {
                       const todayStr = new Date().toISOString().split('T')[0];
                       const todayRecord = logs.find(l => l.date === todayStr);
@@ -4222,117 +4352,84 @@ export default function Dashboard() {
                       );
                     })()}
 
-                    {/* ── Prominent Staff Salary & Earnings Overview Card ── */}
+                    {/* ── 3RD: Running Month Attendance Stats (উপস্থিত, লেইট, অনুপস্থিত, ওভারটাইম) ── */}
                     {(() => {
                       const currentYM = new Date().toISOString().substring(0, 7);
-                      const salaryCalc = calculateMonthlySalary(currentEmployee, currentYM, holidaysList);
-                      const isPaidThisMonth = loadPaymentStatus(currentEmployee.id, currentYM);
+                      const latestEmp = employeesList.find(e => e.id === currentEmployee.id) || currentEmployee;
+                      const salaryCalc = calculateMonthlySalary(latestEmp, currentYM, holidaysList);
+                      const monthLogs = logs.filter(l => l.date.startsWith(currentYM));
+                      const presentDays = monthLogs.filter(l => l.status === 'On-Time' || (l.checkIn && l.checkIn !== '-')).length;
+                      const lateDays = monthLogs.filter(l => l.status === 'Late').length;
+                      const absentDays = salaryCalc.absentDaysCount;
+                      const otHours = salaryCalc.otHours;
 
                       return (
-                        <div className="bg-white border border-slate-200/80 rounded-3xl p-5 sm:p-6 shadow-sm font-sans space-y-4 max-w-xl mx-auto w-full">
-                          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 pb-3 border-b border-slate-100">
-                            <div className="flex items-center gap-2.5">
-                              <div className="w-9 h-9 rounded-2xl bg-brand-green/10 text-brand-green flex items-center justify-center shrink-0">
-                                <Wallet size={18} />
-                              </div>
-                              <div>
-                                <h4 className="font-extrabold text-slate-800 text-sm sm:text-base leading-tight">
-                                  {lang === 'bn' ? 'আমার মাসিক বেতন ও উপার্জন' : 'My Monthly Salary & Earnings'}
-                                </h4>
-                                <p className="text-[10px] text-slate-400 font-medium mt-0.5">
-                                  {lang === 'bn' ? `${currentEmployee.nameBn || currentEmployee.name} (${currentEmployee.id}) • চলতি মাস` : `${currentEmployee.name} (${currentEmployee.id}) • Current Month`}
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-2 self-start sm:self-auto">
-                              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                                isPaidThisMonth 
-                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                                  : 'bg-amber-50 text-amber-700 border-amber-200'
-                              }`}>
-                                {isPaidThisMonth ? (lang === 'bn' ? '✓ পরিশোধিত' : '✓ Paid') : (lang === 'bn' ? '⏳ প্রক্রিয়াধীন' : '⏳ Pending')}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => navigate('/dashboard?tab=salary')}
-                                className="text-xs font-bold text-brand-green hover:underline cursor-pointer bg-transparent border-0 flex items-center gap-1"
-                              >
-                                <span>{lang === 'bn' ? 'পে-স্লিপ' : 'Payslip'}</span>
-                                <ArrowRight size={11} />
-                              </button>
-                            </div>
+                        <div className="space-y-2 max-w-xl mx-auto w-full font-sans">
+                          <div className="flex items-center justify-between px-1">
+                            <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">
+                              {lang === 'bn' ? 'চলতি মাসের হাজিরার বিবরণী' : 'Current Month Attendance Stats'}
+                            </span>
+                            <span className="text-[10.5px] text-slate-400 font-mono">
+                              {currentYM}
+                            </span>
                           </div>
 
-                          {/* Salary Metrics Grid */}
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
-                            <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-100">
-                              <span className="text-[9.5px] text-slate-400 font-bold block mb-0.5">{lang === 'bn' ? 'চুক্তির মূল বেতন:' : 'Basic Salary:'}</span>
-                              <div className="font-extrabold text-slate-800 text-sm font-sans">
-                                ৳{salaryCalc.baseSalary.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                            {/* Present */}
+                            <div className="bg-white border border-slate-200/80 p-3.5 rounded-2xl shadow-xs text-center space-y-0.5">
+                              <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">
+                                {lang === 'bn' ? 'মোট উপস্থিতি' : 'Present'}
+                              </span>
+                              <div className="text-xl font-black text-brand-green">
+                                {toBnDigits(presentDays)} <span className="text-xs font-bold text-slate-400">{lang === 'bn' ? 'দিন' : 'days'}</span>
                               </div>
-                              <span className="text-[8.5px] text-slate-400">{lang === 'bn' ? 'স্থায়ী চুক্তি' : 'Contract'}</span>
-                            </div>
-
-                            <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-100">
-                              <span className="text-[9.5px] text-slate-400 font-bold block mb-0.5">{lang === 'bn' ? 'ওভারটাইম ও বোনাস:' : 'OT & Bonus:'}</span>
-                              <div className="font-extrabold text-emerald-600 text-sm font-sans">
-                                + ৳{(salaryCalc.otPay + salaryCalc.fridayBonus).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}
-                              </div>
-                              <span className="text-[8.5px] text-slate-400">{toBnDigits(salaryCalc.otHours)}h {lang === 'bn' ? 'ওভারটাইম' : 'OT'}</span>
-                            </div>
-
-                            <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-100">
-                              <span className="text-[9.5px] text-slate-400 font-bold block mb-0.5">{lang === 'bn' ? 'অগ্রিম ও কর্তন:' : 'Advance/Cut:'}</span>
-                              <div className="font-extrabold text-amber-600 text-sm font-sans">
-                                - ৳{(salaryCalc.advanceSalary + salaryCalc.deductions + salaryCalc.absentDeduction + salaryCalc.lateDeduction).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}
-                              </div>
-                              <span className="text-[8.5px] text-slate-400">
-                                {salaryCalc.advanceSalary > 0 ? (lang === 'bn' ? `অগ্রিম ৳${salaryCalc.advanceSalary}` : `Adv ৳${salaryCalc.advanceSalary}`) : (lang === 'bn' ? 'কোনো অগ্রিম নেই' : 'No Advance')}
+                              <span className="text-[8.5px] text-emerald-600 font-medium block">
+                                {lang === 'bn' ? 'উপস্থিত কার্যদিবস' : 'Worked days'}
                               </span>
                             </div>
 
-                            <div className="bg-emerald-50/70 p-2.5 rounded-2xl border border-emerald-200">
-                              <span className="text-[9.5px] text-emerald-800 font-bold block mb-0.5">{lang === 'bn' ? 'প্রদেয় নিট বেতন:' : 'Net Payable:'}</span>
-                              <div className="font-black text-brand-green text-base font-sans">
-                                ৳{salaryCalc.netPayable.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}
+                            {/* Late */}
+                            <div className="bg-white border border-slate-200/80 p-3.5 rounded-2xl shadow-xs text-center space-y-0.5">
+                              <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">
+                                {lang === 'bn' ? 'বিলম্ব হাজিরা' : 'Late Entries'}
+                              </span>
+                              <div className="text-xl font-black text-amber-500">
+                                {toBnDigits(lateDays)} <span className="text-xs font-bold text-slate-400">{lang === 'bn' ? 'দিন' : 'days'}</span>
                               </div>
-                              <span className="text-[8.5px] text-emerald-700 font-medium">{toBnDigits(salaryCalc.paidDays)} {lang === 'bn' ? 'দিনের উপস্থিতি' : 'Days'}</span>
+                              <span className="text-[8.5px] text-amber-600 font-medium block">
+                                {salaryCalc.lateCutDays > 0 ? (lang === 'bn' ? `${salaryCalc.lateCutDays} দিন কাটা` : `${salaryCalc.lateCutDays}d cut`) : (lang === 'bn' ? '৩ দিনে ১ দিন কর্তন' : '3:1 cut')}
+                              </span>
+                            </div>
+
+                            {/* Absent */}
+                            <div className="bg-white border border-slate-200/80 p-3.5 rounded-2xl shadow-xs text-center space-y-0.5">
+                              <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">
+                                {lang === 'bn' ? 'অনুপস্থিতি' : 'Absent'}
+                              </span>
+                              <div className="text-xl font-black text-rose-500">
+                                {toBnDigits(absentDays)} <span className="text-xs font-bold text-slate-400">{lang === 'bn' ? 'দিন' : 'days'}</span>
+                              </div>
+                              <span className="text-[8.5px] text-rose-500 font-medium block">
+                                {absentDays > 0 ? (lang === 'bn' ? 'অনুপস্থিত দিন' : 'Absent days') : (lang === 'bn' ? 'সবদিন উপস্থিত' : 'Zero absent')}
+                              </span>
+                            </div>
+
+                            {/* Overtime */}
+                            <div className="bg-white border border-emerald-200/80 bg-linear-to-br from-white to-emerald-50/20 p-3.5 rounded-2xl shadow-xs text-center space-y-0.5">
+                              <span className="text-emerald-700 text-[10px] font-bold uppercase tracking-wider block">
+                                {lang === 'bn' ? 'ওভারটাইম (OT)' : 'Overtime (OT)'}
+                              </span>
+                              <div className="text-xl font-black text-emerald-700">
+                                +{toBnDigits(otHours)}h
+                              </div>
+                              <span className="text-[8.5px] text-emerald-600 font-medium block">
+                                {salaryCalc.otPay > 0 ? `+৳${salaryCalc.otPay.toLocaleString()}` : (lang === 'bn' ? 'অতিরিক্ত সময়' : 'Extra duty')}
+                              </span>
                             </div>
                           </div>
                         </div>
                       );
                     })()}
-
-                    {/* Stats summary cards */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-sans">
-                      <div className="bg-white border border-slate-200/80 p-5 rounded-3xl shadow-sm text-center space-y-1">
-                        <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">
-                          {lang === 'bn' ? 'মোট হাজিরা (চলতি মাস)' : 'Total Present (Month)'}
-                        </span>
-                        <div className="text-2xl font-black text-brand-green">
-                          {logs.filter(l => l.status === 'On-Time' || l.status === 'Late').length} {lang === 'bn' ? 'দিন' : 'days'}
-                        </div>
-                      </div>
-
-                      <div className="bg-white border border-slate-200/80 p-5 rounded-3xl shadow-sm text-center space-y-1">
-                        <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">
-                          {lang === 'bn' ? 'বিলম্বে প্রবেশ' : 'Late Entries'}
-                        </span>
-                        <div className="text-2xl font-black text-amber-500">
-                          {logs.filter(l => l.status === 'Late').length} {lang === 'bn' ? 'দিন' : 'days'}
-                        </div>
-                      </div>
-
-                      <div className="bg-white border border-slate-200/80 p-5 rounded-3xl shadow-sm text-center space-y-1">
-                        <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">
-                          {lang === 'bn' ? 'চলতি নিট প্রদেয়' : 'Est. Current Salary'}
-                        </span>
-                        <div className="text-2xl font-black text-brand-green font-sans">
-                          ৳{calculateMonthlySalary(currentEmployee, new Date().toISOString().substring(0, 7), holidaysList).netPayable.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}
-                        </div>
-                      </div>
-                    </div>
 
                                         {/* Quick Access Shortcuts Panel */}
                     {quickAccessItems.length > 0 && (
@@ -4569,9 +4666,13 @@ export default function Dashboard() {
                   </div>
                 ) : activeTab === 'salary' ? (() => {
                   /* Employee Personal Salary Payslip View */
-                  const currentYM = new Date().toISOString().substring(0, 7);
-                  const calc = calculateMonthlySalary(currentEmployee, currentYM, holidaysList);
-                  const isPaid = paidStatus[currentEmployee.id] || false;
+                  const latestEmp = employeesList.find(e => e.id === currentEmployee.id) || currentEmployee;
+                  const currentYM = selectedProfileMonth || new Date().toISOString().substring(0, 7);
+                  const calc = calculateMonthlySalary(latestEmp, currentYM, holidaysList);
+                  const isPaid = loadPaymentStatus(latestEmp.id, currentYM);
+                  const advanceTaken = latestEmp.advanceSalary || 0;
+                  const allowances = latestEmp.allowances || 0;
+                  const fixedDeductions = latestEmp.deductions || 0;
 
                   return (
                     <div className="space-y-6 font-sans">
@@ -4587,17 +4688,29 @@ export default function Dashboard() {
                                 {lang === 'bn' ? 'আমার মাসিক বেতন বিবরণী (Pay Slip)' : 'My Monthly Payslip'}
                               </h4>
                               <p className="text-[11px] text-slate-400 font-medium">
-                                {lang === 'bn' ? `${currentEmployee.nameBn || currentEmployee.name} • আইডি: ${currentEmployee.id}` : `${currentEmployee.name} • ID: ${currentEmployee.id}`}
+                                {lang === 'bn' ? `${latestEmp.nameBn || latestEmp.name} • আইডি: ${latestEmp.id}` : `${latestEmp.name} • ID: ${latestEmp.id}`}
                               </p>
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            {/* Month Selector */}
+                            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1 text-xs">
+                              <Calendar size={13} className="text-slate-400 shrink-0" />
+                              <input
+                                type="month"
+                                value={currentYM}
+                                onChange={(e) => setSelectedProfileMonth(e.target.value)}
+                                className="bg-transparent text-xs font-bold text-slate-700 outline-none cursor-pointer"
+                              />
+                            </div>
+
                             <span className={`px-3 py-1 rounded-full text-xs font-bold border ${
                               isPaid ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'
                             }`}>
-                              {isPaid ? (lang === 'bn' ? 'পরিশোধিত' : 'Paid') : (lang === 'bn' ? 'বকেয়া' : 'Pending')}
+                              {isPaid ? (lang === 'bn' ? '✓ পরিশোধিত' : '✓ Paid') : (lang === 'bn' ? '⏳ বকেয়া / প্রদেয়' : '⏳ Pending')}
                             </span>
+
                             <button
                               onClick={() => window.print()}
                               className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer border-0"
@@ -4609,51 +4722,91 @@ export default function Dashboard() {
                         </div>
 
                         {/* Salary Summary Highlight */}
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                           <div className="p-4 bg-slate-50 border border-slate-200/60 rounded-2xl text-center space-y-1">
                             <span className="text-[10px] text-slate-400 font-bold uppercase">{lang === 'bn' ? 'মূল বেতন (Basic)' : 'Basic Salary'}</span>
-                            <div className="text-xl font-black text-slate-800">৳{calc.baseSalary.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</div>
+                            <div className="text-xl font-black text-slate-800 font-sans">৳{calc.baseSalary.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</div>
+                            <span className="text-[9px] text-slate-400">{lang === 'bn' ? `দৈনিক: ৳${Math.round(calc.dailyRate)}` : `Daily: ৳${Math.round(calc.dailyRate)}`}</span>
                           </div>
+
                           <div className="p-4 bg-slate-50 border border-slate-200/60 rounded-2xl text-center space-y-1">
-                            <span className="text-[10px] text-slate-400 font-bold uppercase">{lang === 'bn' ? 'দৈনিক হার (Daily Rate)' : 'Daily Rate'}</span>
-                            <div className="text-xl font-black text-slate-800">৳{Math.round(calc.dailyRate).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</div>
+                            <span className="text-[10px] text-slate-400 font-bold uppercase">{lang === 'bn' ? 'পেইড কার্যদিবস' : 'Paid Days'}</span>
+                            <div className="text-xl font-black text-slate-800 font-sans">{calc.paidDays} / {calc.totalCalendarDays} {lang === 'bn' ? 'দিন' : 'days'}</div>
+                            <span className="text-[9px] text-slate-400">{lang === 'bn' ? 'উপস্থিতি ও ছুটিসহ' : 'Worked + Off'}</span>
                           </div>
+
+                          <div className="p-4 bg-rose-50/60 border border-rose-100 rounded-2xl text-center space-y-1">
+                            <span className="text-[10px] text-rose-600 font-bold uppercase">{lang === 'bn' ? 'অগ্রিম গ্রহণ (Advance)' : 'Advance Taken'}</span>
+                            <div className="text-xl font-black text-rose-600 font-sans">৳{advanceTaken.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</div>
+                            <span className="text-[9px] text-rose-500">{advanceTaken > 0 ? (lang === 'bn' ? 'বেতন থেকে কর্তন' : 'Deducted') : (lang === 'bn' ? 'কোনো অগ্রিম নেই' : 'None')}</span>
+                          </div>
+
                           <div className="p-4 bg-emerald-50/80 border border-emerald-200/80 rounded-2xl text-center space-y-1">
                             <span className="text-[10px] text-emerald-700 font-bold uppercase">{lang === 'bn' ? 'সর্বমোট প্রদেয় বেতন (Net Pay)' : 'Net Payable'}</span>
-                            <div className="text-2xl font-black text-emerald-800">৳{calc.netPayable.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</div>
+                            <div className="text-2xl font-black text-emerald-800 font-sans">৳{calc.netPayable.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</div>
+                            <span className="text-[9px] text-emerald-700 font-medium">{isPaid ? (lang === 'bn' ? 'পরিশোধিত' : 'Paid') : (lang === 'bn' ? 'পাওনা বাকি' : 'Pending')}</span>
                           </div>
                         </div>
 
                         {/* Breakdown Table */}
                         <div className="border border-slate-100 rounded-2xl overflow-hidden">
+                          <div className="bg-slate-50 px-4 py-2.5 border-b border-slate-100 font-extrabold text-xs text-slate-700 uppercase tracking-wide">
+                            {lang === 'bn' ? `বেতন ও কর্তন পূর্ণাঙ্গ বিবরণী (${currentYM})` : `Salary & Deduction Statement (${currentYM})`}
+                          </div>
                           <table className="w-full text-xs text-left">
                             <tbody className="divide-y divide-slate-100">
-                              <tr className="bg-slate-50/50">
-                                <td className="p-3 text-slate-600 font-medium">{lang === 'bn' ? 'উপস্থিত কার্যদিবস' : 'Worked Days'}</td>
-                                <td className="p-3 text-right font-bold text-slate-800">{calc.paidDays} {lang === 'bn' ? 'দিন' : 'days'}</td>
+                              <tr className="bg-white">
+                                <td className="p-3 text-slate-600 font-medium">{lang === 'bn' ? 'মূল মাসিক বেতন (Basic Pay)' : 'Basic Monthly Salary'}</td>
+                                <td className="p-3 text-right font-bold text-slate-800 font-mono">৳{calc.baseSalary.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</td>
                               </tr>
-                              <tr>
-                                <td className="p-3 text-slate-600 font-medium">{lang === 'bn' ? 'অনুপস্থিতি কর্তন' : 'Absent Deduction'}</td>
-                                <td className="p-3 text-right font-bold text-rose-600">- ৳{Math.round(calc.absentDeduction).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')} ({calc.absentDaysCount} দিন)</td>
-                              </tr>
-                              <tr className="bg-slate-50/50">
-                                <td className="p-3 text-slate-600 font-medium">{lang === 'bn' ? 'বিলম্ব হাজিরা কর্তন (৩ দিনে ১ দিন)' : 'Late Deductions (3:1)'}</td>
-                                <td className="p-3 text-right font-bold text-amber-600">- ৳{Math.round(calc.lateDeduction).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')} ({calc.lateCount} দিন লেইট)</td>
-                              </tr>
-                              <tr>
-                                <td className="p-3 text-slate-600 font-medium">{lang === 'bn' ? 'শুক্রবারের বিশেষ হাজিরা বোনাস' : 'Friday Worked Bonus'}</td>
-                                <td className="p-3 text-right font-bold text-emerald-600">+ ৳{Math.round(calc.fridayBonus).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')} ({calc.fridayWorkedCount} শুক্রবার)</td>
-                              </tr>
-                              <tr className="bg-slate-50/50">
-                                <td className="p-3 text-slate-600 font-medium">{lang === 'bn' ? 'ওভারটাইম আয় (OT)' : 'Overtime Pay'}</td>
-                                <td className="p-3 text-right font-bold text-emerald-600">+ ৳{Math.round(calc.otPay).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')} ({calc.otHours} ঘণ্টা)</td>
-                              </tr>
-                              {calc.advanceSalary > 0 && (
-                                <tr>
-                                  <td className="p-3 text-slate-600 font-medium">{lang === 'bn' ? 'অগ্রিম গ্রহণ কর্তন' : 'Advance Salary Cut'}</td>
-                                  <td className="p-3 text-right font-bold text-rose-600">- ৳{calc.advanceSalary.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</td>
+                              {allowances > 0 && (
+                                <tr className="bg-slate-50/50">
+                                  <td className="p-3 text-slate-600 font-medium">{lang === 'bn' ? 'মাসিক নিয়মিত ভাতা (Allowances)' : 'Monthly Allowances'}</td>
+                                  <td className="p-3 text-right font-bold text-emerald-600 font-mono">+ ৳{allowances.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</td>
                                 </tr>
                               )}
+                              <tr className="bg-white">
+                                <td className="p-3 text-slate-600 font-medium">{lang === 'bn' ? 'অনুপস্থিতি কর্তন' : 'Absent Deduction'}</td>
+                                <td className="p-3 text-right font-bold text-rose-600 font-mono">
+                                  {calc.absentDaysCount > 0 ? `- ৳${Math.round(calc.absentDeduction).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')} (${calc.absentDaysCount} দিন)` : '৳০ (নেই)'}
+                                </td>
+                              </tr>
+                              <tr className="bg-slate-50/50">
+                                <td className="p-3 text-slate-600 font-medium">{lang === 'bn' ? 'বিলম্ব হাজিরা কর্তন (প্রতি ৩ দিনে ১ দিনের বেতন কাটা)' : 'Late Deductions (3 lates = 1 day cut)'}</td>
+                                <td className="p-3 text-right font-bold text-amber-600 font-mono">
+                                  {calc.lateCutDays > 0 ? `- ৳${Math.round(calc.lateDeduction).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')} (${calc.lateCount} দিন লেট)` : '৳০ (কর্তন নেই)'}
+                                </td>
+                              </tr>
+                              <tr className="bg-white">
+                                <td className="p-3 text-slate-600 font-medium">{lang === 'bn' ? 'শুক্রবারের বিশেষ হাজিরা বোনাস' : 'Friday Worked Bonus'}</td>
+                                <td className="p-3 text-right font-bold text-emerald-600 font-mono">
+                                  {calc.fridayBonus > 0 ? `+ ৳${Math.round(calc.fridayBonus).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')} (${calc.fridayWorkedCount} শুক্রবার)` : '৳০'}
+                                </td>
+                              </tr>
+                              <tr className="bg-slate-50/50">
+                                <td className="p-3 text-slate-600 font-medium">{lang === 'bn' ? 'ওভারটাইম আয় (OT - দৈনিক ৮ ঘণ্টার অতিরিক্ত)' : 'Overtime Pay (Beyond 8h/day)'}</td>
+                                <td className="p-3 text-right font-bold text-emerald-600 font-mono">
+                                  {calc.otPay > 0 ? `+ ৳${Math.round(calc.otPay).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')} (${calc.otHours} ঘণ্টা)` : '৳০'}
+                                </td>
+                              </tr>
+                              {advanceTaken > 0 && (
+                                <tr className="bg-rose-50/20">
+                                  <td className="p-3 text-rose-800 font-medium">{lang === 'bn' ? 'পূর্বে গৃহিত অগ্রিম বেতন কর্তন (Advance Cut)' : 'Advance Salary Deducted'}</td>
+                                  <td className="p-3 text-right font-bold text-rose-600 font-mono">- ৳{advanceTaken.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</td>
+                                </tr>
+                              )}
+                              {fixedDeductions > 0 && (
+                                <tr className="bg-slate-50/50">
+                                  <td className="p-3 text-slate-600 font-medium">{lang === 'bn' ? 'অন্যান্য নির্দিষ্ট কর্তন' : 'Other Deductions'}</td>
+                                  <td className="p-3 text-right font-bold text-rose-600 font-mono">- ৳{fixedDeductions.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</td>
+                                </tr>
+                              )}
+                              <tr className="bg-emerald-50/80 font-bold border-t border-emerald-200">
+                                <td className="p-3.5 text-emerald-950 font-black text-xs sm:text-sm">{lang === 'bn' ? 'সর্বমোট প্রদেয় নিট বেতন (Net Payable)' : 'Total Net Payable'}</td>
+                                <td className="p-3.5 text-right font-black text-emerald-800 text-base sm:text-lg font-mono">
+                                  ৳{calc.netPayable.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}
+                                </td>
+                              </tr>
                             </tbody>
                           </table>
                         </div>
@@ -8065,6 +8218,105 @@ export default function Dashboard() {
                 className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all border-0 cursor-pointer"
               >
                 {lang === 'bn' ? 'ঠিক আছে, বুঝতে পেরেছি' : 'Got it'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* OurBuilders ERP Style Premium Punch Attendance Confirmation Modal */}
+        {punchSuccessData && punchSuccessData.isOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-fade-in font-sans select-none">
+            <div className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-7 max-w-sm w-full shadow-2xl space-y-5 text-center relative overflow-hidden">
+              {/* Top Accent Strip */}
+              <div className={`absolute top-0 left-0 right-0 h-2 ${
+                punchSuccessData.type === 'checkin'
+                  ? punchSuccessData.status === 'Late'
+                    ? 'bg-amber-500'
+                    : 'bg-brand-green'
+                  : 'bg-rose-500'
+              }`} />
+
+              {/* Close Icon Button */}
+              <button
+                type="button"
+                onClick={() => setPunchSuccessData(null)}
+                className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100 transition cursor-pointer border-0 bg-transparent"
+              >
+                <X size={18} />
+              </button>
+
+              {/* Animated Success Badge */}
+              <div className="flex justify-center pt-2">
+                <div className={`w-16 h-16 rounded-3xl flex items-center justify-center shadow-lg ${
+                  punchSuccessData.type === 'checkin'
+                    ? punchSuccessData.status === 'Late'
+                      ? 'bg-amber-50 text-amber-600 ring-8 ring-amber-50/60'
+                      : 'bg-emerald-50 text-brand-green ring-8 ring-emerald-50/60'
+                    : 'bg-rose-50 text-rose-600 ring-8 ring-rose-50/60'
+                }`}>
+                  {punchSuccessData.type === 'checkin' ? (
+                    <CheckCircle2 size={36} className="animate-bounce" />
+                  ) : (
+                    <LogOut size={32} />
+                  )}
+                </div>
+              </div>
+
+              {/* Title & Badge */}
+              <div className="space-y-1.5">
+                <h3 className="font-black text-slate-900 text-lg">
+                  {punchSuccessData.type === 'checkin' 
+                    ? (lang === 'bn' ? 'হাজিরা সফলভাবে গৃহীত!' : 'Check-In Confirmed!') 
+                    : (lang === 'bn' ? 'প্রস্থান সফলভাবে সংরক্ষিত!' : 'Check-Out Confirmed!')}
+                </h3>
+                <div className="flex justify-center">
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold border ${
+                    punchSuccessData.status === 'Late'
+                      ? 'bg-amber-50 text-amber-800 border-amber-200'
+                      : punchSuccessData.type === 'checkin'
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                        : 'bg-rose-50 text-rose-800 border-rose-200'
+                  }`}>
+                    {punchSuccessData.statusBn}
+                  </span>
+                </div>
+              </div>
+
+              {/* Digital Stamp Card */}
+              <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 space-y-2.5 text-xs text-left">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400 font-bold uppercase text-[9.5px]">{lang === 'bn' ? 'কর্মকর্তার নাম' : 'Employee'}:</span>
+                  <span className="font-extrabold text-slate-800">{punchSuccessData.empName} ({punchSuccessData.empId})</span>
+                </div>
+
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400 font-bold uppercase text-[9.5px]">{lang === 'bn' ? 'তারিখ ও সময়' : 'Date & Time'}:</span>
+                  <span className="font-mono font-bold text-slate-800">{punchSuccessData.date} • {punchSuccessData.time}</span>
+                </div>
+
+                <div className="flex justify-between items-center pt-1 border-t border-slate-200/60">
+                  <span className="text-slate-400 font-bold uppercase text-[9.5px]">{lang === 'bn' ? 'লোকেশন' : 'Location'}:</span>
+                  <span className="inline-flex items-center gap-1 font-bold text-emerald-700">
+                    <MapPin size={11} className="text-emerald-600" />
+                    <span>{punchSuccessData.location}</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Note Message */}
+              {punchSuccessData.note && (
+                <p className="text-xs text-slate-500 leading-relaxed font-medium">
+                  {punchSuccessData.note}
+                </p>
+              )}
+
+              {/* Done Button */}
+              <button
+                type="button"
+                onClick={() => setPunchSuccessData(null)}
+                className="w-full py-3 bg-brand-green hover:bg-brand-green-dark text-white font-extrabold text-xs uppercase tracking-wider rounded-2xl shadow-lg shadow-brand-green/20 transition-all cursor-pointer border-0"
+              >
+                {lang === 'bn' ? 'ঠিক আছে' : 'OK, Understood'}
               </button>
             </div>
           </div>
