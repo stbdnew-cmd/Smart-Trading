@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Lock, ArrowRight, AlertCircle, Eye, EyeOff, Shield, User } from 'lucide-react';
+import { Lock, ArrowRight, AlertCircle, Eye, EyeOff, Shield, User, Users, ChevronDown, ChevronUp } from 'lucide-react';
 import { useLang } from '../context/LangContext';
+import { supabase } from '../lib/supabase';
 
 export interface EmployeePermissions {
   manageEmployees: boolean;
@@ -133,6 +134,9 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>('');
 
+  const [employees, setEmployees] = useState<Employee[]>(() => getEmployeesList());
+  const [showAllEmployees, setShowAllEmployees] = useState<boolean>(false);
+
   useEffect(() => {
     const empSession = localStorage.getItem('ob_logged_in_employee');
     const adminSession = localStorage.getItem('ob_logged_in_admin');
@@ -141,6 +145,35 @@ export default function Login() {
     } else if (adminSession === 'true') {
       navigate('/dashboard?view=admin');
     }
+
+    // Background sync employees registry from Supabase cloud
+    const syncCloudEmployees = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('notices')
+          .select('content')
+          .eq('id', 'SYS_EMPLOYEES_REGISTRY')
+          .maybeSingle();
+
+        if (!error && data?.content) {
+          const cloudList: Employee[] = JSON.parse(data.content);
+          if (Array.isArray(cloudList) && cloudList.length > 0) {
+            const currentLocal = getEmployeesList();
+            const merged = [...cloudList];
+            currentLocal.forEach(loc => {
+              if (!merged.some(m => m.id.toLowerCase() === loc.id.toLowerCase())) {
+                merged.push(loc);
+              }
+            });
+            localStorage.setItem('ob_employees_list', JSON.stringify(merged));
+            setEmployees(merged);
+          }
+        }
+      } catch (err) {
+        console.error("Cloud employee sync notice check error:", err);
+      }
+    };
+    syncCloudEmployees();
   }, [navigate]);
 
   const handleLogin = (e: React.FormEvent) => {
@@ -150,7 +183,7 @@ export default function Login() {
 
     // Check Admin Login (admin / admin@smarttrading.com)
     if (
-      (cleanUser === 'admin' || cleanUser === 'admin@smarttrading.com') && 
+      (cleanUser === 'admin' || cleanUser === 'admin@smarttrading.com' || cleanUser === 'administrator') && 
       (cleanPass === '1234' || cleanPass === 'admin123')
     ) {
       localStorage.setItem('ob_logged_in_admin', 'true');
@@ -160,22 +193,36 @@ export default function Login() {
       return;
     }
 
-    // Check Employee Login
-    const employees = getEmployeesList();
-    const emp = employees.find(e => {
+    // Check Employee Login with smart forgiving matching
+    const currentList = employees.length > 0 ? employees : getEmployeesList();
+    const userDigits = cleanUser.replace(/[^0-9]/g, '');
+    const userAlphaNum = cleanUser.replace(/[^a-z0-9]/gi, '');
+    const userNoDomain = cleanUser.replace(/@.*$/, '');
+
+    const emp = currentList.find(e => {
       const eId = e.id.trim().toLowerCase();
+      const eIdDigits = eId.replace(/[^0-9]/g, '');
+      const eIdAlphaNum = eId.replace(/[^a-z0-9]/gi, '');
       const eEmail = e.email.trim().toLowerCase();
-      const eName = e.name.trim().toLowerCase();
-      const normalizedUser = cleanUser.replace(/@smarttrading\.com$/, '');
       const empEmailPrefix = eEmail.split('@')[0];
+      const eName = e.name.trim().toLowerCase();
+      const eNameBn = (e.nameBn || '').trim().toLowerCase();
 
       return (
+        // Exact ID match or without dash/spaces or digits only (e.g. ST-106, st106, 106)
         eId === cleanUser ||
+        eIdAlphaNum === userAlphaNum ||
+        (userDigits.length > 0 && eIdDigits === userDigits) ||
+        // Email match or email prefix
         eEmail === cleanUser ||
         empEmailPrefix === cleanUser ||
-        empEmailPrefix === normalizedUser ||
+        empEmailPrefix === userNoDomain ||
+        // Name match (English or Bengali)
         eName === cleanUser ||
-        eName === normalizedUser
+        eNameBn === cleanUser ||
+        eName === userNoDomain ||
+        (cleanUser.length > 2 && eName.includes(cleanUser)) ||
+        (cleanUser.length > 2 && eNameBn.includes(cleanUser))
       );
     });
 
@@ -189,15 +236,15 @@ export default function Login() {
         return;
       } else {
         setErrorMsg(lang === 'bn'
-          ? 'ভুল পাসওয়ার্ড! সঠিক পাসওয়ার্ড দিয়ে আবার চেষ্টা করুন।'
-          : 'Incorrect password! Please try again.');
+          ? 'ভুল পাসওয়ার্ড! সঠিক পাসওয়ার্ড দিয়ে আবার চেষ্টা করুন (ডিফল্ট: 1234)।'
+          : 'Incorrect password! Please try again (Default: 1234).');
         return;
       }
     }
 
     setErrorMsg(lang === 'bn' 
-      ? 'ভুল আইডি অথবা ইমেইল! অনুগ্রহ করে সঠিক কর্মচারী আইডি (যেমন ST-101) বা ইমেইল লিখুন।' 
-      : 'Incorrect ID or Email! Please enter a valid employee ID (e.g. ST-101) or email.');
+      ? 'ভুল আইডি অথবা ইমেইল! অনুগ্রহ করে সঠিক কর্মচারী আইডি (যেমন ST-101 বা 101) বা নাম লিখুন।' 
+      : 'Incorrect ID or Email! Please enter a valid employee ID (e.g. ST-101 or 101) or email.');
   };
 
   return (
@@ -324,6 +371,55 @@ export default function Login() {
                 <User size={11} className="text-brand-green shrink-0" />
                 <span>{lang === 'bn' ? 'স্টাফ (ST-101)' : 'Staff'}</span>
               </button>
+            </div>
+
+            {/* Toggle to see all employee accounts */}
+            <div className="pt-1.5 border-t border-slate-200/60">
+              <button
+                type="button"
+                onClick={() => setShowAllEmployees(!showAllEmployees)}
+                className="w-full flex items-center justify-between text-[10px] font-bold text-slate-500 hover:text-brand-green py-1 px-1 transition-colors cursor-pointer border-0 bg-transparent"
+              >
+                <span className="flex items-center gap-1.5">
+                  <Users size={12} className="text-brand-green" />
+                  <span>{lang === 'bn' ? `সকল কর্মীর তালিকা দেখুন (${employees.length} জন)` : `View All Registered Staff (${employees.length})`}</span>
+                </span>
+                {showAllEmployees ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+              </button>
+
+              {showAllEmployees && (
+                <div className="mt-2 space-y-1 max-h-48 overflow-y-auto pr-1">
+                  {employees.map(emp => (
+                    <button
+                      key={emp.id}
+                      type="button"
+                      onClick={() => {
+                        setUsername(emp.id);
+                        setPassword(emp.password || '1234');
+                        setErrorMsg('');
+                      }}
+                      className="w-full text-left p-2 rounded-xl bg-white hover:bg-emerald-50/70 border border-slate-200/80 hover:border-brand-green/40 transition-all flex items-center justify-between gap-2 cursor-pointer shadow-2xs group"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono font-bold text-[10px] text-brand-green bg-brand-green/10 px-1.5 py-0.2 rounded">
+                            {emp.id}
+                          </span>
+                          <span className="font-bold text-slate-800 text-[11px] truncate">
+                            {lang === 'bn' ? emp.nameBn : emp.name}
+                          </span>
+                        </div>
+                        <div className="text-[9px] text-slate-400 truncate mt-0.5">
+                          {emp.email}
+                        </div>
+                      </div>
+                      <span className="text-[9px] font-mono text-slate-400 group-hover:text-brand-green font-bold shrink-0">
+                        PIN: {emp.password || '1234'}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

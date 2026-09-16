@@ -727,21 +727,44 @@ export default function Dashboard() {
         localStorage.setItem('ob_tasks_list', JSON.stringify(mappedTasks));
       }
 
-      // 2. Fetch Notices
+      // 2. Fetch Notices & Cloud Registry
       const { data: noticesData, error: noticesError } = await supabase
         .from('notices')
         .select('*')
         .order('created_at', { ascending: false });
       
       if (!noticesError && noticesData) {
-        const mappedNotices = noticesData.map((n: any) => ({
-          id: n.id,
-          title: n.title,
-          content: n.content,
-          type: n.type,
-          targetEmpId: n.target_emp_id,
-          date: n.date
-        }));
+        // Check for cloud employee registry and sync
+        const sysRegistry = noticesData.find((n: any) => n.id === 'SYS_EMPLOYEES_REGISTRY');
+        if (sysRegistry && sysRegistry.content) {
+          try {
+            const cloudEmps = JSON.parse(sysRegistry.content) as Employee[];
+            if (Array.isArray(cloudEmps) && cloudEmps.length > 0) {
+              const currentLocal = getEmployeesList();
+              const merged = [...cloudEmps];
+              currentLocal.forEach(loc => {
+                if (!merged.some(m => m.id.toLowerCase() === loc.id.toLowerCase())) {
+                  merged.push(loc);
+                }
+              });
+              localStorage.setItem('ob_employees_list', JSON.stringify(merged));
+              setEmployeesList(merged);
+            }
+          } catch(e) {
+            console.error("Cloud employee registry parse error:", e);
+          }
+        }
+
+        const mappedNotices = noticesData
+          .filter((n: any) => !n.id?.startsWith('SYS_'))
+          .map((n: any) => ({
+            id: n.id,
+            title: n.title,
+            content: n.content,
+            type: n.type,
+            targetEmpId: n.target_emp_id,
+            date: n.date
+          }));
         setNoticesList(mappedNotices);
         localStorage.setItem('ob_notices_list', JSON.stringify(mappedNotices));
       }
@@ -1676,6 +1699,22 @@ export default function Dashboard() {
     }
   };
 
+  // Helper to sync employees list to Supabase cloud registry
+  const syncEmployeesToCloud = async (list: Employee[]) => {
+    try {
+      await supabase.from('notices').upsert({
+        id: 'SYS_EMPLOYEES_REGISTRY',
+        title: 'System Employees Registry',
+        content: JSON.stringify(list),
+        type: 'Personal',
+        target_emp_id: 'SYSTEM',
+        date: new Date().toISOString().split('T')[0]
+      });
+    } catch (e) {
+      console.error('Failed to sync employees to Supabase:', e);
+    }
+  };
+
   // Add Employee Form Handler
   const handleAddEmployee = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1739,6 +1778,7 @@ export default function Dashboard() {
     const updated = [...employeesList, newEmp];
     localStorage.setItem('ob_employees_list', JSON.stringify(updated));
     setEmployeesList(updated);
+    syncEmployeesToCloud(updated);
     
     setPaidStatus(prev => ({ ...prev, [cleanId]: false }));
     setNewId(getNextEmployeeId(updated));
@@ -1777,6 +1817,7 @@ export default function Dashboard() {
         const updated = employeesList.filter(e => e.id !== empId);
         localStorage.setItem('ob_employees_list', JSON.stringify(updated));
         setEmployeesList(updated);
+        syncEmployeesToCloud(updated);
         
         const newPaid = { ...paidStatus };
         delete newPaid[empId];
@@ -1835,6 +1876,7 @@ export default function Dashboard() {
     localStorage.setItem('ob_employees_list', JSON.stringify(updated));
     setEmployeesList(updated);
     setEditSalaryNote('');
+    syncEmployeesToCloud(updated);
 
     if (currentEmployee && currentEmployee.id === activeEmpProfileId) {
       const currentUpdated = updated.find(e => e.id === activeEmpProfileId);
