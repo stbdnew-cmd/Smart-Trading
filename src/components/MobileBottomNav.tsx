@@ -57,7 +57,10 @@ export default function MobileBottomNav() {
         'grid-cols-5'
       }`}>
         {items.map(({ icon: Icon, label, path, isExternal }: any) => {
-          const isActive = location.pathname + location.search === path;
+          const currentTab = new URLSearchParams(location.search).get('tab') || 'dashboard';
+          const targetTab = new URLSearchParams(path.split('?')[1] || '').get('tab') || 'dashboard';
+          const isActive = (location.pathname + location.search === path) || 
+            (location.pathname === '/dashboard' && path.startsWith('/dashboard') && currentTab === targetTab);
           const content = (
             <div className={cn(
               "flex flex-col items-center justify-center gap-1 py-2.5 transition-colors",

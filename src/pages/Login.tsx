@@ -20,8 +20,8 @@ export interface Employee {
   nameBn: string;
   designation: string;
   designationBn: string;
-  dept: string;
-  deptBn: string;
+  dept?: string;
+  deptBn?: string;
   baseSalary: number;
   salaryType?: 'hourly' | 'monthly';
   hourlyRate?: number;
@@ -114,6 +114,10 @@ export const getEmployeesList = (): Employee[] => {
           modified.hourlyRate = Math.round((modified.baseSalary || 30000) / (26 * 8)) || 150;
           needsSave = true;
         }
+        if (modified.email && modified.email.toLowerCase().endsWith('@smarttrading.com')) {
+          modified.email = modified.email.replace(/@smarttrading\.com$/i, '@trading.com');
+          needsSave = true;
+        }
 
         return modified;
       });
@@ -127,11 +131,11 @@ export const getEmployeesList = (): Employee[] => {
   }
 
   const defaultList: Employee[] = [
-    { id: 'ST-101', email: 'rahim@smarttrading.com', name: 'Md. Rahim Uddin', nameBn: 'মোঃ রহিম উদ্দিন', designation: 'Shop Manager', designationBn: 'শপ ম্যানেজার', baseSalary: 50000, salaryType: 'hourly', hourlyRate: 240, joiningDate: '2024-01-10', shiftStartTime: '09:00', allowances: 5000, deductions: 2000, advanceSalary: 0, password: '1234' },
-    { id: 'ST-102', email: 'farhana@smarttrading.com', name: 'Farhana Islam', nameBn: 'ফারহানা ইসলাম', designation: 'Senior Sales Executive', designationBn: 'সিনিয়র সেলস এক্সিকিউটিভ', baseSalary: 45000, salaryType: 'hourly', hourlyRate: 215, joiningDate: '2024-02-15', shiftStartTime: '09:00', allowances: 4000, deductions: 1500, advanceSalary: 2000, password: '1234' },
-    { id: 'ST-103', email: 'kamrul@smarttrading.com', name: 'Kamrul Hasan', nameBn: 'কামরুল হাসান', designation: 'Inventory & Stock Incharge', designationBn: 'ইনভেন্টরি ইনচার্জ', baseSalary: 35000, salaryType: 'hourly', hourlyRate: 170, joiningDate: '2024-03-20', shiftStartTime: '09:00', allowances: 3000, deductions: 1000, advanceSalary: 0, password: '1234' },
-    { id: 'ST-104', email: 'tania@smarttrading.com', name: 'Tania Akter', nameBn: 'তানিয়া আক্তার', designation: 'Accounts Executive', designationBn: 'হিসাব কর্মকর্তা', baseSalary: 30000, salaryType: 'hourly', hourlyRate: 150, joiningDate: '2024-04-01', shiftStartTime: '09:00', allowances: 2500, deductions: 800, advanceSalary: 0, password: '1234' },
-    { id: 'ST-105', email: 'sajid@smarttrading.com', name: 'Sajid Al-Mahmud', nameBn: 'সাজিদ আল-মাহমুদ', designation: 'Sales & Support Officer', designationBn: 'সেলস ও কাস্টমার সার্ভিস', baseSalary: 28000, salaryType: 'hourly', hourlyRate: 135, joiningDate: '2024-05-12', shiftStartTime: '09:00', allowances: 2000, deductions: 500, advanceSalary: 1000, password: '1234' }
+    { id: 'ST-101', email: 'rahim@trading.com', name: 'Md. Rahim Uddin', nameBn: 'মোঃ রহিম উদ্দিন', designation: 'Shop Manager', designationBn: 'শপ ম্যানেজার', baseSalary: 50000, salaryType: 'hourly', hourlyRate: 240, joiningDate: '2024-01-10', shiftStartTime: '09:00', allowances: 5000, deductions: 2000, advanceSalary: 0, password: '1234' },
+    { id: 'ST-102', email: 'farhana@trading.com', name: 'Farhana Islam', nameBn: 'ফারহানা ইসলাম', designation: 'Senior Sales Executive', designationBn: 'সিনিয়র সেলস এক্সিকিউটিভ', baseSalary: 45000, salaryType: 'hourly', hourlyRate: 215, joiningDate: '2024-02-15', shiftStartTime: '09:00', allowances: 4000, deductions: 1500, advanceSalary: 2000, password: '1234' },
+    { id: 'ST-103', email: 'kamrul@trading.com', name: 'Kamrul Hasan', nameBn: 'কামরুল হাসান', designation: 'Inventory & Stock Incharge', designationBn: 'ইনভেন্টরি ইনচার্জ', baseSalary: 35000, salaryType: 'hourly', hourlyRate: 170, joiningDate: '2024-03-20', shiftStartTime: '09:00', allowances: 3000, deductions: 1000, advanceSalary: 0, password: '1234' },
+    { id: 'ST-104', email: 'tania@trading.com', name: 'Tania Akter', nameBn: 'তানিয়া আক্তার', designation: 'Accounts Executive', designationBn: 'হিসাব কর্মকর্তা', baseSalary: 30000, salaryType: 'hourly', hourlyRate: 150, joiningDate: '2024-04-01', shiftStartTime: '09:00', allowances: 2500, deductions: 800, advanceSalary: 0, password: '1234' },
+    { id: 'ST-105', email: 'sajid@trading.com', name: 'Sajid Al-Mahmud', nameBn: 'সাজিদ আল-মাহমুদ', designation: 'Sales & Support Officer', designationBn: 'সেলস ও কাস্টমার সার্ভিস', baseSalary: 28000, salaryType: 'hourly', hourlyRate: 135, joiningDate: '2024-05-12', shiftStartTime: '09:00', allowances: 2000, deductions: 500, advanceSalary: 1000, password: '1234' }
   ];
   localStorage.setItem('ob_employees_list', JSON.stringify(defaultList));
   return defaultList;
@@ -192,9 +196,9 @@ export default function Login() {
     const cleanUser = username.trim().toLowerCase();
     const cleanPass = password.trim();
 
-    // Check Admin Login (admin / admin@smarttrading.com)
+    // Check Admin Login (admin / admin@trading.com / admin@smarttrading.com)
     if (
-      (cleanUser === 'admin' || cleanUser === 'admin@smarttrading.com' || cleanUser === 'administrator') && 
+      (cleanUser === 'admin' || cleanUser === 'admin@trading.com' || cleanUser === 'admin@smarttrading.com' || cleanUser === 'administrator') && 
       (cleanPass === '1234' || cleanPass === 'admin123')
     ) {
       localStorage.setItem('ob_logged_in_admin', 'true');

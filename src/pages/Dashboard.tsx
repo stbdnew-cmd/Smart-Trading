@@ -673,7 +673,7 @@ export default function Dashboard() {
         setEditDesignation(emp.designation);
         setEditDesignationBn(emp.designationBn || emp.designation);
         setEditEmail(emp.email);
-        setEditEmailPrefix(emp.email.replace(/@smarttrading\.com$/i, ''));
+        setEditEmailPrefix(emp.email.replace(/@(trading|smarttrading)\.com$/i, ''));
         setEditSalary(String(emp.baseSalary || 30000));
         setEditSalaryType(emp.salaryType || 'hourly');
         setEditHourlyRate(String(emp.hourlyRate || Math.round((emp.baseSalary || 30000) / (26 * 8)) || 150));
@@ -1754,7 +1754,7 @@ export default function Dashboard() {
     e.preventDefault();
     const cleanId = newId.trim().toUpperCase();
     const cleanPrefix = newEmailPrefix.trim().toLowerCase().replace(/@.*$/, '').replace(/[^a-z0-9._-]/g, '');
-    const cleanEmail = cleanPrefix ? `${cleanPrefix}@smarttrading.com` : '';
+    const cleanEmail = cleanPrefix ? `${cleanPrefix}@trading.com` : '';
     const cleanName = newName.trim();
     const cleanNameBn = newNameBn.trim() || cleanName;
     const hourlyRateVal = Math.max(0, parseInt(newHourlyRate) || 150);
@@ -1875,7 +1875,7 @@ export default function Dashboard() {
     if (!activeEmpProfileId) return;
 
     const cleanPrefix = editEmailPrefix.trim().replace(/@.*$/, '');
-    const fullEmail = cleanPrefix ? `${cleanPrefix}@smarttrading.com` : editEmail;
+    const fullEmail = cleanPrefix ? `${cleanPrefix}@trading.com` : editEmail;
 
     const hourlyRateVal = Math.max(0, parseInt(editHourlyRate) || 150);
     const newSalaryVal = editSalaryType === 'hourly'
@@ -3122,7 +3122,7 @@ export default function Dashboard() {
                           <div className="sm:col-span-2 md:col-span-3 space-y-1 pt-2 border-t border-slate-200/50">
                             <span className="text-slate-400 block font-bold uppercase text-[9px]">{lang === 'bn' ? 'অফিসিয়াল ইমেইল এড্রেস' : 'Official Email'}</span>
                             <span className="font-bold text-slate-700 font-mono text-xs">
-                              {currentEmployee ? currentEmployee.email : 'admin@smarttrading.com'}
+                              {currentEmployee ? currentEmployee.email : 'admin@trading.com'}
                             </span>
                           </div>
                         </div>
@@ -6352,12 +6352,12 @@ export default function Dashboard() {
                               <input
                                 type="text"
                                 value={editEmailPrefix}
-                                onChange={(e) => setEditEmailPrefix(e.target.value.toLowerCase().replace(/@smarttrading\.com/g, '').replace(/[^a-z0-9._-]/g, ''))}
+                                onChange={(e) => setEditEmailPrefix(e.target.value.toLowerCase().replace(/@(trading|smarttrading)\.com/g, '').replace(/[^a-z0-9._-]/g, ''))}
                                 className="flex-1 min-w-0 bg-transparent px-3 py-2 text-xs outline-none font-bold text-slate-800"
                                 required
                               />
                               <span className="shrink-0 whitespace-nowrap bg-slate-200/80 text-slate-600 px-2.5 sm:px-3 py-2 text-[10px] sm:text-[11px] font-bold font-mono border-l border-slate-200 select-none">
-                                @smarttrading.com
+                                @trading.com
                               </span>
                             </div>
                           </div>
@@ -6925,7 +6925,7 @@ export default function Dashboard() {
                           required
                         />
                         <span className="shrink-0 whitespace-nowrap bg-slate-200/80 text-slate-600 px-2.5 sm:px-3 py-2 text-[10px] sm:text-[11px] font-bold font-mono border-l border-slate-200 select-none">
-                          @smarttrading.com
+                          @trading.com
                         </span>
                       </div>
                     </div>
@@ -7211,7 +7211,7 @@ export default function Dashboard() {
                           required
                         />
                         <span className="shrink-0 whitespace-nowrap bg-slate-200/80 text-slate-600 px-2.5 sm:px-3 py-2 text-[10px] sm:text-[11px] font-bold font-mono border-l border-slate-200 select-none">
-                          @smarttrading.com
+                          @trading.com
                         </span>
                       </div>
                     </div>
