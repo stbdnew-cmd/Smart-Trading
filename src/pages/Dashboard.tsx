@@ -4,7 +4,7 @@ import { motion } from 'motion/react';
 import { 
   Clock, Calendar, CheckCircle, LogOut, FileSpreadsheet, Users, 
   Settings as SettingsIcon, LayoutDashboard, AlertCircle, PlusCircle, Trash2, 
-  UserCheck, DollarSign, Wallet, Megaphone, Bell, History, X, ClipboardList, User, Send, MessageSquare, ChevronDown, ChevronUp, ChevronRight, Mail, Check, Copy, Plus, ArrowRight, Printer, FileText, Camera, Upload, Lock, Eye, EyeOff, TrendingUp, ArrowUpRight, ArrowDownRight,
+  UserCheck, DollarSign, Wallet, Megaphone, Bell, History, X, ClipboardList, User, Send, MessageSquare, ChevronDown, ChevronUp, ChevronRight, ChevronLeft, Menu, Mail, Check, Copy, Plus, ArrowRight, Printer, FileText, Camera, Upload, Lock, Eye, EyeOff, TrendingUp, ArrowUpRight, ArrowDownRight,
   Download, Smartphone, Monitor, MapPin, Edit3, Sliders, Search, ShieldCheck, ShieldAlert, Sparkles, Building2, Zap, AlertTriangle, CheckCircle2, Phone, Filter, Crosshair,
   LogIn, RotateCcw
 } from 'lucide-react';
@@ -423,6 +423,20 @@ export default function Dashboard() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isAppInstalled, setIsAppInstalled] = useState(false);
   const [showInstallModal, setShowInstallModal] = useState(false);
+
+  // Left Sidebar / Drawer State (Collapsible on Desktop, Slide-over on Mobile)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+    return localStorage.getItem('ob_sidebar_collapsed') === 'true';
+  });
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed(prev => {
+      const next = !prev;
+      localStorage.setItem('ob_sidebar_collapsed', String(next));
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone) {
@@ -2313,64 +2327,173 @@ export default function Dashboard() {
       ];
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="max-w-7xl mx-auto flex">
-
-        {/* ────── LEFT SIDEBAR (desktop md+ only) ────── */}
-        <aside className="hidden md:flex w-56 shrink-0 flex-col bg-white border-r border-slate-200/70 sticky top-0 h-screen overflow-y-auto shadow-sm">
-          {/* Brand Header */}
-          <div className="px-5 py-5 border-b border-slate-100">
-            <div className="flex items-center gap-2.5">
-              <img src="/logo.svg" alt="Smart Trading Logo" className="w-9 h-9 object-contain shrink-0" />
-              <div>
-                <p className="text-xs font-black text-slate-900 leading-tight">Smart Trading</p>
-                <p className="text-[9.5px] text-slate-400 font-medium">HRMS Dashboard</p>
+    <div className="min-h-screen bg-slate-50 flex">
+      {/* Mobile Slide-Over Drawer (md:hidden) */}
+      {mobileDrawerOpen && (
+        <div className="md:hidden fixed inset-0 z-50 flex">
+          {/* Backdrop */}
+          <div 
+            onClick={() => setMobileDrawerOpen(false)}
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs animate-fade-in"
+          />
+          {/* Drawer Content */}
+          <div className="relative w-72 max-w-[80vw] bg-white h-full shadow-2xl flex flex-col z-10 animate-slide-in-left">
+            {/* Drawer Header */}
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <img src="/logo.svg" alt="Smart Trading Logo" className="w-9 h-9 object-contain shrink-0" />
+                <div>
+                  <p className="text-xs font-black text-slate-900 leading-tight">Smart Trading</p>
+                  <p className="text-[9.5px] text-slate-400 font-medium">HRMS Dashboard</p>
+                </div>
               </div>
+              <button
+                type="button"
+                onClick={() => setMobileDrawerOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100 transition-colors border-0 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Drawer Nav Items */}
+            <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+              {sidebarNavItems.map(item => {
+                const isActive = activeTab === item.tab;
+                return (
+                  <button
+                    key={item.tab}
+                    onClick={() => {
+                      navigate(`/dashboard?tab=${item.tab}`);
+                      setMobileDrawerOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left transition-all cursor-pointer border-0 ${
+                      isActive
+                        ? 'bg-brand-green/10 text-brand-green font-bold'
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
+                    }`}
+                  >
+                    <span className={isActive ? 'text-brand-green' : 'text-slate-400'}>
+                      {item.icon}
+                    </span>
+                    <span className="text-xs tracking-wide">{item.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* Drawer Logout */}
+            <div className="p-3 border-t border-slate-100">
+              <button
+                onClick={() => {
+                  setMobileDrawerOpen(false);
+                  handleLogout();
+                }}
+                className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left transition-all cursor-pointer border-0 text-rose-500 hover:bg-rose-50 font-medium"
+              >
+                <LogOut size={18} className="text-rose-400" />
+                <span className="text-xs tracking-wide">{lang === 'bn' ? 'লগআউট' : 'Logout'}</span>
+              </button>
             </div>
           </div>
+        </div>
+      )}
 
-          {/* Nav Items */}
-          <nav className="flex-1 px-2.5 py-3 space-y-0.5">
-            {sidebarNavItems.map(item => (
+      {/* ────── LEFT SIDEBAR (desktop md+ only, full left, collapsible) ────── */}
+      <aside className={`hidden md:flex flex-col bg-white border-r border-slate-200/80 sticky top-0 h-screen overflow-y-auto shadow-xs z-30 shrink-0 transition-all duration-300 select-none ${
+        isSidebarCollapsed ? 'w-20' : 'w-60'
+      }`}>
+        {/* Brand Header */}
+        <div className={`p-4 border-b border-slate-100 flex items-center transition-all ${
+          isSidebarCollapsed ? 'flex-col gap-2.5 justify-center' : 'justify-between'
+        }`}>
+          <div className={`flex items-center gap-2.5 min-w-0 ${isSidebarCollapsed ? 'justify-center' : ''}`}>
+            <img src="/logo.svg" alt="Smart Trading Logo" className="w-9 h-9 object-contain shrink-0" />
+            {!isSidebarCollapsed && (
+              <div className="min-w-0 overflow-hidden">
+                <p className="text-xs font-black text-slate-900 leading-tight truncate">Smart Trading</p>
+                <p className="text-[9.5px] text-slate-400 font-medium truncate">HRMS Dashboard</p>
+              </div>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={toggleSidebar}
+            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors border-0 cursor-pointer shrink-0"
+            title={isSidebarCollapsed ? (lang === 'bn' ? 'সাইডবার বড় করুন' : 'Expand Sidebar') : (lang === 'bn' ? 'সাইডবার ছোট করুন' : 'Collapse Sidebar')}
+          >
+            {isSidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          </button>
+        </div>
+
+        {/* Nav Items */}
+        <nav className="flex-1 px-2.5 py-3 space-y-1">
+          {sidebarNavItems.map(item => {
+            const isActive = activeTab === item.tab;
+            return (
               <button
                 key={item.tab}
                 onClick={() => navigate(`/dashboard?tab=${item.tab}`)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all cursor-pointer border-0 relative ${
-                  activeTab === item.tab
-                    ? 'bg-brand-green/10 text-brand-green font-bold'
+                title={isSidebarCollapsed ? item.label : undefined}
+                className={`w-full flex items-center rounded-xl transition-all cursor-pointer border-0 relative group ${
+                  isSidebarCollapsed 
+                    ? 'justify-center py-3 px-0' 
+                    : 'gap-3 px-3 py-2.5 text-left'
+                } ${
+                  isActive
+                    ? 'bg-brand-green/10 text-brand-green font-bold shadow-2xs'
                     : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
                 }`}
               >
-                {activeTab === item.tab && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-brand-green rounded-r-full" />
+                {isActive && (
+                  <span className={`absolute left-0 top-1/2 -translate-y-1/2 bg-brand-green rounded-r-full ${
+                    isSidebarCollapsed ? 'w-1 h-7' : 'w-1 h-5'
+                  }`} />
                 )}
-                <span className={activeTab === item.tab ? 'text-brand-green' : 'text-slate-400'}>
+                <span className={`shrink-0 transition-transform group-hover:scale-110 ${isActive ? 'text-brand-green' : 'text-slate-400 group-hover:text-slate-600'}`}>
                   {item.icon}
                 </span>
-                <span className="text-[11.5px] tracking-wide truncate">{item.label}</span>
+                {!isSidebarCollapsed && (
+                  <span className="text-[11.5px] tracking-wide truncate">{item.label}</span>
+                )}
               </button>
-            ))}
-          </nav>
+            );
+          })}
+        </nav>
 
-          {/* Logout at bottom */}
-          <div className="px-2.5 py-4 border-t border-slate-100">
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all cursor-pointer border-0 text-rose-500 hover:bg-rose-50 font-medium"
-            >
-              <LogOut size={16} className="text-rose-400" />
+        {/* Logout at bottom */}
+        <div className={`py-4 border-t border-slate-100 ${isSidebarCollapsed ? 'px-2' : 'px-2.5'}`}>
+          <button
+            onClick={handleLogout}
+            title={isSidebarCollapsed ? (lang === 'bn' ? 'লগআউট' : 'Logout') : undefined}
+            className={`w-full flex items-center rounded-xl transition-all cursor-pointer border-0 text-rose-500 hover:bg-rose-50 font-medium ${
+              isSidebarCollapsed ? 'justify-center py-3 px-0' : 'gap-3 px-3 py-2.5 text-left'
+            }`}
+          >
+            <LogOut size={16} className="text-rose-400 shrink-0" />
+            {!isSidebarCollapsed && (
               <span className="text-[11.5px] tracking-wide">{lang === 'bn' ? 'লগআউট' : 'Logout'}</span>
-            </button>
-          </div>
-        </aside>
+            )}
+          </button>
+        </div>
+      </aside>
 
-        {/* ────── MAIN CONTENT AREA ────── */}
-        <div className="flex-1 min-w-0 pt-4 pb-28 px-3 sm:px-4 md:py-6 md:px-7">
+      {/* ────── MAIN CONTENT AREA ────── */}
+      <div className="flex-1 min-w-0 flex flex-col">
+        <div className="flex-1 pt-4 pb-28 px-3 sm:px-4 md:py-6 md:px-7 max-w-7xl w-full mx-auto">
 
           {/* Mobile Full-Width Edge-to-Edge Header (md:hidden) */}
           <div className="md:hidden -mx-3 -mt-4 sm:-mx-4 mb-4 sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 py-2.5 flex items-center justify-between shadow-2xs">
-            {/* Left: Clean Logo & Brand Title */}
-            <div className="flex items-center gap-2.5">
+            {/* Left: Mobile Drawer Trigger + Clean Logo & Brand Title */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setMobileDrawerOpen(true)}
+                className="p-1.5 -ml-1 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors border-0 cursor-pointer"
+                title={lang === 'bn' ? 'মেনু' : 'Menu'}
+              >
+                <Menu size={20} />
+              </button>
               <img src="/logo.svg" alt="Smart Trading Logo" className="w-8 h-8 object-contain shrink-0" />
               <div>
                 <p className="text-xs font-black text-slate-900 leading-tight">Smart Trading</p>
@@ -4434,44 +4557,40 @@ export default function Dashboard() {
                         </span>
                       </div>
 
-                      <div className="p-4 space-y-3 overflow-y-auto">
+                      <div className="p-3.5 sm:p-4 bg-slate-50/50 space-y-3 overflow-y-auto">
                         {activeEmployeeNotices.slice(0, 3).map(not => (
                           <div 
                             key={not.id}
                             onClick={() => setSelectedNoticeDetails(not)}
-                            className="p-3 border border-slate-100 rounded-2xl bg-slate-50/30 hover:border-brand-green hover:bg-slate-50/50 transition-all cursor-pointer flex justify-between items-start gap-4"
+                            className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs hover:border-brand-green/50 hover:shadow-sm transition-all cursor-pointer flex justify-between items-start gap-3"
                           >
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className={`inline-flex items-center gap-1 text-[8px] font-bold px-1.5 py-0.5 rounded ${
-                                  not.type === 'All' ? 'bg-brand-green/10 text-brand-green' : 'bg-brand-gold/10 text-amber-800'
-                                }`}>
-                                  {not.type === 'All' ? (
-                                    <>
-                                      <Megaphone size={9} className="shrink-0" />
-                                      <span>{lang === 'bn' ? 'সাধারণ' : 'General'}</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Lock size={9} className="shrink-0" />
-                                      <span>{lang === 'bn' ? 'ব্যক্তিগত' : 'Personal'}</span>
-                                    </>
-                                  )}
-                                </span>
-                                <span className="text-[9px] text-slate-400 font-mono">{not.date}</span>
+                            <div className="flex items-start gap-3 min-w-0">
+                              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                                not.type === 'All' ? 'bg-brand-green/10 text-brand-green' : 'bg-amber-50 text-amber-600'
+                              }`}>
+                                {not.type === 'All' ? <Megaphone size={16} /> : <Lock size={16} />}
                               </div>
-                              <h6 className="font-bold text-slate-800 text-sm mt-1">{not.title}</h6>
-                              <p className="text-xs text-slate-500 leading-relaxed truncate max-w-lg mt-0.5">{not.content}</p>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className={`inline-flex items-center gap-1 text-[8.5px] font-extrabold px-2 py-0.5 rounded-full border ${
+                                    not.type === 'All' ? 'bg-brand-green/10 text-brand-green border-brand-green/20' : 'bg-amber-50 text-amber-700 border-amber-200'
+                                  }`}>
+                                    {not.type === 'All' ? (lang === 'bn' ? 'সাধারণ' : 'General') : (lang === 'bn' ? 'ব্যক্তিগত' : 'Personal')}
+                                  </span>
+                                  <span className="text-[9px] text-slate-400 font-mono">{not.date}</span>
+                                </div>
+                                <h6 className="font-extrabold text-slate-800 text-xs sm:text-sm mt-1 leading-tight">{not.title}</h6>
+                                <p className="text-[10.5px] text-slate-500 leading-relaxed line-clamp-2 mt-0.5">{not.content}</p>
+                              </div>
                             </div>
-                            <span className="text-[10px] text-brand-green font-bold shrink-0 self-center flex items-center gap-1">
-                              <span>{lang === 'bn' ? 'দেখুন' : 'View'}</span>
-                              <ArrowRight size={11} />
-                            </span>
+                            <div className="shrink-0 self-center w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-brand-green/10 hover:text-brand-green transition-colors">
+                              <ArrowRight size={12} />
+                            </div>
                           </div>
                         ))}
                         {activeEmployeeNotices.length === 0 && (
-                          <div className="text-center py-8 text-slate-400">
-                            {lang === 'bn' ? 'কোনো নোটিশ নেই।' : 'No notices.'}
+                          <div className="text-center py-8 text-slate-400 text-xs">
+                            {lang === 'bn' ? 'কোনো নোটিশ নেই।' : 'No notices yet.'}
                           </div>
                         )}
                       </div>
@@ -4492,23 +4611,23 @@ export default function Dashboard() {
                     </div>
 
                     {/* Mobile Expandable Cards View (md:hidden) */}
-                    <div className="md:hidden divide-y divide-slate-100 flex-1 overflow-y-auto">
+                    <div className="md:hidden p-3.5 sm:p-4 bg-slate-50/50 space-y-3 flex-1 overflow-y-auto">
                       {logs.map((log) => {
                         const metrics = getAttendanceMetrics(log);
                         const isExpanded = expandedHistoryDate === log.date;
 
                         return (
-                          <div key={log.date} className="p-3.5 space-y-2.5 transition-colors">
+                          <div key={log.date} className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs space-y-3 hover:border-slate-300 transition-all">
                             {/* Header: Date + Status + MarkedBy */}
                             <div className="flex items-center justify-between gap-2">
-                              <span className="font-bold text-slate-800 text-xs">{log.date}</span>
+                              <span className="font-extrabold text-slate-800 text-xs font-mono">{log.date}</span>
                               <div className="flex items-center gap-1.5">
-                                <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                                <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[9px] font-bold border ${
                                   log.status === 'On-Time' 
-                                    ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' 
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
                                     : log.status === 'Late'
-                                      ? 'bg-amber-50 text-amber-600 border border-amber-100'
-                                      : 'bg-red-50 text-red-600 border border-red-100'
+                                      ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                      : 'bg-rose-50 text-rose-600 border-rose-200'
                                 }`}>
                                   {lang === 'bn' ? log.statusBn : log.status}
                                 </span>
@@ -4526,18 +4645,18 @@ export default function Dashboard() {
                             </div>
 
                             {/* In / Out / Duration Quick Grid */}
-                            <div className="grid grid-cols-3 gap-2 bg-slate-50/80 p-2 rounded-xl border border-slate-100 text-[10.5px]">
+                            <div className="grid grid-cols-3 gap-2 bg-slate-50/90 p-2.5 rounded-xl border border-slate-200/70 text-[11px]">
                               <div className="space-y-0.5">
-                                <span className="text-slate-400 text-[9.5px] block">{lang === 'bn' ? 'প্রবেশ' : 'In'}</span>
-                                <span className="font-mono font-bold text-slate-800">{log.checkIn || '-'}</span>
+                                <span className="text-slate-400 text-[9px] font-bold block uppercase tracking-wider">{lang === 'bn' ? 'প্রবেশ' : 'In'}</span>
+                                <span className="font-mono font-bold text-slate-800 text-[10.5px]">{log.checkIn || '-'}</span>
                               </div>
                               <div className="space-y-0.5">
-                                <span className="text-slate-400 text-[9.5px] block">{lang === 'bn' ? 'প্রস্থান' : 'Out'}</span>
-                                <span className="font-mono font-bold text-slate-800">{log.checkOut || '-'}</span>
+                                <span className="text-slate-400 text-[9px] font-bold block uppercase tracking-wider">{lang === 'bn' ? 'প্রস্থান' : 'Out'}</span>
+                                <span className="font-mono font-bold text-slate-800 text-[10.5px]">{log.checkOut || '-'}</span>
                               </div>
                               <div className="space-y-0.5">
-                                <span className="text-slate-400 text-[9.5px] block">{lang === 'bn' ? 'কাজের সময়' : 'Duration'}</span>
-                                <span className="font-bold text-slate-700 truncate block">{metrics.duration}</span>
+                                <span className="text-slate-400 text-[9px] font-bold block uppercase tracking-wider">{lang === 'bn' ? 'কাজের সময়' : 'Duration'}</span>
+                                <span className="font-bold text-slate-700 truncate block text-[10.5px]">{metrics.duration}</span>
                               </div>
                             </div>
 
@@ -4553,15 +4672,15 @@ export default function Dashboard() {
 
                             {/* Expanded Details */}
                             {isExpanded && (
-                              <div className="pt-2 border-t border-slate-100 space-y-1.5 text-[11px]">
+                              <div className="pt-2.5 border-t border-slate-100 space-y-2 text-[11px] animate-fade-in">
                                 {log.location && log.location !== '-' && (
-                                  <div className="flex items-center gap-1.5 text-emerald-800 bg-emerald-50/70 p-2 rounded-lg border border-emerald-100 text-[10px]">
-                                    <MapPin size={11} className="text-emerald-600 shrink-0" />
+                                  <div className="flex items-center gap-1.5 text-emerald-800 bg-emerald-50/80 p-2.5 rounded-xl border border-emerald-200/70 text-[10.5px]">
+                                    <MapPin size={12} className="text-emerald-600 shrink-0" />
                                     <span>{formatLocation(log.location)}</span>
                                   </div>
                                 )}
                                 {log.note && (
-                                  <div className="bg-white p-2 rounded-lg border border-slate-200/60 text-[10.5px] text-slate-600">
+                                  <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200/70 text-[10.5px] text-slate-600">
                                     <span className="font-bold text-slate-700 block mb-0.5">{lang === 'bn' ? 'নোট:' : 'Note:'}</span>
                                     {log.note}
                                   </div>
@@ -4889,7 +5008,7 @@ export default function Dashboard() {
 
                   return (
                     <div className="space-y-3 shrink-0">
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                         
                         {/* Card 1: Total Employees */}
                         <div className="bg-white border border-slate-200/80 p-4 rounded-2xl shadow-sm flex items-center justify-between gap-2">
@@ -4951,6 +5070,33 @@ export default function Dashboard() {
                           </div>
                         </div>
 
+                        {/* Card 5: Monthly Payroll */}
+                        {(() => {
+                          const currentYM = new Date().toISOString().substring(0, 7);
+                          const totalPayroll = employeesList.reduce((sum, emp) => {
+                            try {
+                              const c = calculateMonthlySalary(emp, currentYM, holidaysList);
+                              return sum + c.netPayable;
+                            } catch { return sum; }
+                          }, 0);
+                          return (
+                            <div className="col-span-2 sm:col-span-3 lg:col-span-1 bg-white border border-emerald-200/70 bg-linear-to-br from-white to-emerald-50/20 p-4 rounded-2xl shadow-sm flex items-center justify-between gap-2">
+                              <div className="space-y-0.5 font-sans">
+                                <span className="text-emerald-700 text-[10px] font-bold uppercase tracking-wider block">
+                                  {lang === 'bn' ? 'মাসিক বেতন বাজেট' : 'Monthly Payroll'}
+                                </span>
+                                <div className="text-base sm:text-lg font-black text-emerald-800">
+                                  ৳{totalPayroll.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}
+                                </div>
+                                <span className="text-[9px] text-emerald-600 font-medium block">{currentYM}</span>
+                              </div>
+                              <div className="p-2.5 bg-emerald-100 text-emerald-600 rounded-xl shrink-0">
+                                <Wallet className="w-5 h-5" />
+                              </div>
+                            </div>
+                          );
+                        })()}
+
                       </div>
                     </div>
                   );
@@ -5003,8 +5149,8 @@ export default function Dashboard() {
                         </span>
                       </div>
 
-                      {/* Mobile Responsive Cards View (md:hidden) */}
-                      <div className="md:hidden divide-y divide-slate-100">
+                      {/* Mobile Cards View (md:hidden) */}
+                      <div className="md:hidden p-3.5 sm:p-4 bg-slate-50/50 space-y-3 overflow-y-auto">
                         {filteredEmployees.map((emp) => {
                           const todayStr = new Date().toISOString().split('T')[0];
                           let todayLog: any = null;
@@ -5017,71 +5163,73 @@ export default function Dashboard() {
                           const inTime = todayLog?.checkIn && todayLog.checkIn !== '-' ? todayLog.checkIn : '';
                           const outTime = todayLog?.checkOut && todayLog.checkOut !== '-' ? todayLog.checkOut : '';
                           const hasIn = !!inTime;
-                          const hasOut = !!outTime;
                           const isLate = todayLog?.status === 'Late';
                           const isAbsent = todayLog?.status === 'Absent';
                           const isLeave = todayLog?.status === 'Leave';
 
                           return (
-                            <div key={emp.id} className="p-3.5 space-y-2.5 hover:bg-slate-50/60 transition-colors">
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex items-center gap-2.5 min-w-0">
-                                  <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200/80 flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
-                                    {emp.avatar ? (
-                                      <img src={emp.avatar} alt={emp.name} className="w-full h-full object-cover" />
-                                    ) : (
-                                      <span className="text-[11px] font-black text-brand-green">{emp.name.charAt(0).toUpperCase()}</span>
-                                    )}
+                            <div key={emp.id} className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs hover:border-slate-300 hover:shadow-sm transition-all space-y-3">
+                              <div className="flex items-start justify-between gap-2.5">
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <div className="relative">
+                                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-200/80 flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
+                                      {emp.avatar ? (
+                                        <img src={emp.avatar} alt={emp.name} className="w-full h-full object-cover" />
+                                      ) : (
+                                        <span className="text-xs font-black text-brand-green">{emp.name.charAt(0).toUpperCase()}</span>
+                                      )}
+                                    </div>
+                                    <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${
+                                      hasIn ? (isLate ? 'bg-amber-500' : 'bg-emerald-500') : (isAbsent ? 'bg-rose-500' : 'bg-slate-300')
+                                    }`} />
                                   </div>
                                   <div className="min-w-0">
-                                    <div className="font-bold text-slate-800 text-xs truncate">
+                                    <div className="font-extrabold text-slate-800 text-xs truncate">
                                       {lang === 'bn' ? emp.nameBn : emp.name}
                                     </div>
-                                    <div className="flex items-center gap-1.5 text-[9.5px] text-slate-400 font-medium">
-                                      <span className="font-mono font-bold text-slate-600 bg-slate-100 px-1 py-0.2 rounded">{emp.id}</span>
-                                      <span>•</span>
-                                      <span className="truncate">{lang === 'bn' ? emp.designationBn : emp.designation}</span>
+                                    <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-medium mt-0.5">
+                                      <span className="font-mono font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200/60">{emp.id}</span>
                                     </div>
                                   </div>
                                 </div>
 
-                                <span className={`inline-flex px-2 py-0.5 rounded-full text-[9.5px] font-bold shrink-0 ${
+                                <span className={`inline-flex px-2.5 py-1 rounded-full text-[9.5px] font-extrabold shrink-0 border ${
                                   isAbsent 
-                                    ? 'bg-rose-50 text-rose-600 border border-rose-200' 
+                                    ? 'bg-rose-50 text-rose-600 border-rose-200' 
                                     : isLeave 
-                                      ? 'bg-blue-50 text-blue-600 border border-blue-200'
+                                      ? 'bg-blue-50 text-blue-600 border-blue-200'
                                       : isLate 
-                                        ? 'bg-amber-50 text-amber-700 border border-amber-200' 
+                                        ? 'bg-amber-50 text-amber-700 border-amber-200' 
                                         : hasIn
-                                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                          : 'bg-slate-100 text-slate-500 border border-slate-200'
+                                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                          : 'bg-slate-100 text-slate-500 border-slate-200'
                                 }`}>
                                   {isAbsent 
                                     ? (lang === 'bn' ? 'অনুপস্থিত' : 'Absent') 
                                     : isLeave 
                                       ? (lang === 'bn' ? 'ছুটি' : 'Leave')
                                       : isLate 
-                                        ? (lang === 'bn' ? 'বিলম্বে (Late)' : 'Late') 
+                                        ? (lang === 'bn' ? 'বিলম্বে' : 'Late') 
                                         : hasIn
                                           ? (lang === 'bn' ? 'উপস্থিত' : 'Present')
                                           : (lang === 'bn' ? 'হাজিরা বাকি' : 'Pending')}
                                 </span>
                               </div>
 
-                              <div className="grid grid-cols-3 gap-2 bg-slate-50/80 p-2.5 rounded-xl border border-slate-100 text-[10.5px]">
+                              <div className="grid grid-cols-3 gap-2 bg-slate-50/90 p-2.5 rounded-xl border border-slate-200/70 text-[11px]">
                                 <div className="space-y-0.5">
-                                  <span className="text-slate-400 text-[9px] font-bold block uppercase">{lang === 'bn' ? 'নির্ধারিত শিফট' : 'Shift'}</span>
-                                  <span className="font-mono font-bold text-slate-700">{emp.shiftStartTime || '09:00 AM'}</span>
+                                  <span className="text-slate-400 text-[9px] font-bold block uppercase tracking-wider">{lang === 'bn' ? 'নির্ধারিত শিফট' : 'Shift'}</span>
+                                  <span className="font-mono font-bold text-slate-700 text-[10.5px]">{emp.shiftStartTime || '09:00 AM'}</span>
                                 </div>
                                 <div className="space-y-0.5">
-                                  <span className="text-slate-400 text-[9px] font-bold block uppercase">{lang === 'bn' ? 'প্রবেশ (In)' : 'Check In'}</span>
-                                  <span className={`font-mono font-bold ${hasIn ? (isLate ? 'text-amber-600' : 'text-emerald-700') : 'text-slate-400'}`}>
+                                  <span className="text-slate-400 text-[9px] font-bold block uppercase tracking-wider">{lang === 'bn' ? 'প্রবেশ (In)' : 'Check In'}</span>
+                                  <span className={`font-mono font-bold text-[10.5px] ${hasIn ? (isLate ? 'text-amber-600' : 'text-emerald-700') : 'text-slate-400'}`}>
                                     {inTime || '-'}
                                   </span>
                                 </div>
                                 <div className="space-y-0.5">
-                                  <span className="text-slate-400 text-[9px] font-bold block uppercase">{lang === 'bn' ? 'প্রস্থান (Out)' : 'Check Out'}</span>
-                                  <span className="font-mono font-bold text-slate-700">
+                                  <span className="text-slate-400 text-[9px] font-bold block uppercase tracking-wider">{lang === 'bn' ? 'প্রস্থান (Out)' : 'Check Out'}</span>
+                                  <span className="font-mono font-bold text-[10.5px] text-slate-700">
                                     {outTime || (hasIn ? (lang === 'bn' ? 'চলমান' : 'Active') : '-')}
                                   </span>
                                 </div>
@@ -5103,8 +5251,8 @@ export default function Dashboard() {
                               <th className="px-5 py-3.5 text-right">{lang === 'bn' ? 'হাজিরা অবস্থা' : 'Status'}</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-slate-100 text-slate-650">
-                            {filteredEmployees.map((emp) => {
+                          <tbody className="text-slate-650">
+                            {filteredEmployees.map((emp, empIdx) => {
                               const todayStr = new Date().toISOString().split('T')[0];
                               let todayLog: any = null;
                               try {
@@ -5121,44 +5269,80 @@ export default function Dashboard() {
                               const isLeave = todayLog?.status === 'Leave';
 
                               return (
-                                <tr key={emp.id} className="hover:bg-slate-50/40 transition-colors">
-                                  <td className="px-5 py-3.5">
-                                    <div className="font-bold text-slate-800">{lang === 'bn' ? emp.nameBn : emp.name}</div>
-                                    <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
-                                      <span className="font-mono font-bold text-slate-600">{emp.id}</span>
-                                      <span>•</span>
-                                      <span>{lang === 'bn' ? emp.designationBn : emp.designation}</span>
+                                <tr key={emp.id} className={`border-b border-slate-100 transition-colors ${
+                                  empIdx % 2 === 0 ? 'bg-white hover:bg-slate-50' : 'bg-slate-50/50 hover:bg-slate-100/50'
+                                }`}>
+                                  <td className="px-5 py-4">
+                                    <div className="flex items-center gap-3">
+                                      <div className="relative shrink-0">
+                                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-200/80 flex items-center justify-center overflow-hidden shadow-2xs">
+                                          {emp.avatar ? (
+                                            <img src={emp.avatar} alt={emp.name} className="w-full h-full object-cover" />
+                                          ) : (
+                                            <span className="text-[11px] font-black text-brand-green">{emp.name.charAt(0).toUpperCase()}</span>
+                                          )}
+                                        </div>
+                                        <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white ${
+                                          hasIn ? (isLate ? 'bg-amber-500' : 'bg-emerald-500') : (isAbsent ? 'bg-rose-500' : 'bg-slate-300')
+                                        }`} />
+                                      </div>
+                                      <div>
+                                        <div className="font-bold text-slate-800 text-[11px]">{lang === 'bn' ? emp.nameBn : emp.name}</div>
+                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                          <span className="font-mono font-bold text-[9px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200/60">{emp.id}</span>
+                                        </div>
+                                      </div>
                                     </div>
                                   </td>
-                                  <td className="px-3 py-3.5 font-mono font-bold text-slate-600 whitespace-nowrap">
-                                    {emp.shiftStartTime || '09:00 AM'}
-                                  </td>
-                                  <td className="px-3 py-3.5 font-mono font-bold whitespace-nowrap">
-                                    <span className={hasIn ? (isLate ? 'text-amber-600' : 'text-emerald-700') : 'text-slate-400'}>
-                                      {inTime || '-'}
+                                  <td className="px-3 py-4 whitespace-nowrap">
+                                    <span className="inline-flex items-center gap-1 font-mono font-bold text-slate-600 text-[11px] bg-slate-100 px-2 py-1 rounded-lg">
+                                      <Clock size={11} className="text-slate-400" />
+                                      {emp.shiftStartTime || '09:00 AM'}
                                     </span>
                                   </td>
-                                  <td className="px-3 py-3.5 font-mono font-bold text-slate-600 whitespace-nowrap">
-                                    {outTime || (hasIn ? <span className="text-emerald-600 text-[11px] font-bold font-sans">{lang === 'bn' ? 'ডিউটিতে আছেন' : 'Active'}</span> : '-')}
+                                  <td className="px-3 py-4 font-mono font-bold whitespace-nowrap">
+                                    {hasIn ? (
+                                      <span className={`inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg ${isLate ? 'text-amber-700 bg-amber-50' : 'text-emerald-700 bg-emerald-50'}`}>
+                                        <Clock size={11} className={isLate ? 'text-amber-500' : 'text-emerald-500'} />
+                                        {inTime}
+                                      </span>
+                                    ) : (
+                                      <span className="text-slate-300 font-mono">—</span>
+                                    )}
                                   </td>
-                                  <td className="px-5 py-3.5 text-right whitespace-nowrap">
-                                    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[9.5px] font-bold ${
+                                  <td className="px-3 py-4 font-mono font-bold text-slate-600 whitespace-nowrap">
+                                    {outTime ? (
+                                      <span className="inline-flex items-center gap-1 text-[11px] text-slate-700 px-2 py-1 rounded-lg bg-slate-100">
+                                        <Clock size={11} className="text-amber-500" />
+                                        {outTime}
+                                      </span>
+                                    ) : hasIn ? (
+                                      <span className="inline-flex items-center gap-1 text-emerald-600 text-[10px] font-bold font-sans px-2 py-1 rounded-lg bg-emerald-50">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                        {lang === 'bn' ? 'ডিউটিতে আছেন' : 'Active'}
+                                      </span>
+                                    ) : (
+                                      <span className="text-slate-300 font-mono">—</span>
+                                    )}
+                                  </td>
+                                  <td className="px-5 py-4 text-right whitespace-nowrap">
+                                    <span className={`inline-flex px-2.5 py-1 rounded-full text-[9.5px] font-bold border ${
                                       isAbsent 
-                                        ? 'bg-rose-50 text-rose-600 border border-rose-200' 
+                                        ? 'bg-rose-50 text-rose-600 border-rose-200' 
                                         : isLeave 
-                                          ? 'bg-blue-50 text-blue-600 border border-blue-200'
+                                          ? 'bg-blue-50 text-blue-600 border-blue-200'
                                           : isLate 
-                                            ? 'bg-amber-50 text-amber-700 border border-amber-200' 
+                                            ? 'bg-amber-50 text-amber-700 border-amber-200' 
                                             : hasIn
-                                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                              : 'bg-slate-100 text-slate-500 border border-slate-200'
+                                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                              : 'bg-slate-100 text-slate-500 border-slate-200'
                                     }`}>
                                       {isAbsent 
                                         ? (lang === 'bn' ? 'অনুপস্থিত' : 'Absent') 
                                         : isLeave 
                                           ? (lang === 'bn' ? 'ছুটি' : 'Leave')
                                           : isLate 
-                                            ? (lang === 'bn' ? 'বিলম্বে (Late)' : 'Late') 
+                                            ? (lang === 'bn' ? 'বিলম্বে' : 'Late') 
                                             : hasIn
                                               ? (lang === 'bn' ? 'উপস্থিত' : 'Present')
                                               : (lang === 'bn' ? 'হাজিরা বাকি' : 'Pending')}
@@ -5189,44 +5373,40 @@ export default function Dashboard() {
                         </span>
                       </div>
 
-                      <div className="p-4 space-y-3 overflow-y-auto">
+                      <div className="p-3.5 sm:p-4 bg-slate-50/50 space-y-3 overflow-y-auto">
                         {noticesList.slice(0, 5).map(not => (
                           <div 
                             key={not.id}
                             onClick={() => setSelectedNoticeDetails(not)}
-                            className="p-3 border border-slate-100 rounded-2xl bg-slate-50/30 hover:border-brand-green hover:bg-slate-50/50 transition-all cursor-pointer flex justify-between items-start gap-4"
+                            className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs hover:border-brand-green/50 hover:shadow-sm transition-all cursor-pointer flex justify-between items-start gap-3"
                           >
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className={`inline-flex items-center gap-1 text-[8px] font-bold px-1.5 py-0.5 rounded ${
-                                  not.type === 'All' ? 'bg-brand-green/10 text-brand-green' : 'bg-brand-gold/10 text-amber-800'
-                                }`}>
-                                  {not.type === 'All' ? (
-                                    <>
-                                      <Megaphone size={9} className="shrink-0" />
-                                      <span>{lang === 'bn' ? 'সাধারণ' : 'General'}</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Lock size={9} className="shrink-0" />
-                                      <span>{lang === 'bn' ? `ব্যক্তিগত: ${not.targetEmpId}` : `Personal: ${not.targetEmpId}`}</span>
-                                    </>
-                                  )}
-                                </span>
-                                <span className="text-[9px] text-slate-400 font-mono">{not.date}</span>
+                            <div className="flex items-start gap-3 min-w-0">
+                              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                                not.type === 'All' ? 'bg-brand-green/10 text-brand-green' : 'bg-amber-50 text-amber-600'
+                              }`}>
+                                {not.type === 'All' ? <Megaphone size={16} /> : <Lock size={16} />}
                               </div>
-                              <h6 className="font-bold text-slate-800 text-sm mt-1">{not.title}</h6>
-                              <p className="text-xs text-slate-500 leading-relaxed truncate max-w-lg mt-0.5">{not.content}</p>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className={`inline-flex items-center gap-1 text-[8.5px] font-extrabold px-2 py-0.5 rounded-full border ${
+                                    not.type === 'All' ? 'bg-brand-green/10 text-brand-green border-brand-green/20' : 'bg-amber-50 text-amber-700 border-amber-200'
+                                  }`}>
+                                    {not.type === 'All' ? (lang === 'bn' ? 'সাধারণ' : 'General') : (lang === 'bn' ? `ব্যক্তিগত: ${not.targetEmpId}` : `Personal: ${not.targetEmpId}`)}
+                                  </span>
+                                  <span className="text-[9px] text-slate-400 font-mono">{not.date}</span>
+                                </div>
+                                <h6 className="font-extrabold text-slate-800 text-xs sm:text-sm mt-1 leading-tight">{not.title}</h6>
+                                <p className="text-[10.5px] text-slate-500 leading-relaxed line-clamp-2 mt-0.5">{not.content}</p>
+                              </div>
                             </div>
-                            <span className="text-[10px] text-brand-green font-bold shrink-0 self-center flex items-center gap-1">
-                              <span>{lang === 'bn' ? 'দেখুন' : 'View'}</span>
-                              <ArrowRight size={11} />
-                            </span>
+                            <div className="shrink-0 self-center w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-brand-green/10 hover:text-brand-green transition-colors">
+                              <ArrowRight size={12} />
+                            </div>
                           </div>
                         ))}
                         {noticesList.length === 0 && (
-                          <div className="text-center py-8 text-slate-400">
-                            {lang === 'bn' ? 'কোনো নোটিশ নেই।' : 'No notices.'}
+                          <div className="text-center py-8 text-slate-400 text-xs">
+                            {lang === 'bn' ? 'কোনো নোটিশ নেই।' : 'No notices yet.'}
                           </div>
                         )}
                       </div>
@@ -5372,7 +5552,7 @@ export default function Dashboard() {
                     </div>
 
                     {/* Mobile Expandable Cards View (md:hidden) */}
-                    <div className="md:hidden divide-y divide-slate-100 flex-1 overflow-y-auto">
+                    <div className="md:hidden p-3.5 sm:p-4 bg-slate-50/50 space-y-3.5 flex-1 overflow-y-auto">
                       {displayedEmployees.map((emp) => {
                         const log = getEmployeeAttendanceRecord(emp.id, attendanceDate);
                         const metrics = getAttendanceMetrics(log);
@@ -5386,40 +5566,45 @@ export default function Dashboard() {
                           <div 
                             key={emp.id} 
                             onClick={() => setExpandedAttendanceEmpId(isExpanded ? null : emp.id)}
-                            className={`p-3.5 space-y-2.5 transition-all cursor-pointer select-none ${isExpanded ? 'bg-emerald-50/25' : 'hover:bg-slate-50/70'}`}
+                            className={`bg-white border rounded-2xl p-4 shadow-xs transition-all cursor-pointer select-none space-y-3 ${
+                              isExpanded ? 'border-brand-green/50 shadow-md' : 'border-slate-200/80 hover:border-slate-300 hover:shadow-sm'
+                            }`}
                           >
                             {/* Card Header: Avatar, Name, Shift, Status & Expand Chevron */}
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex items-center gap-2.5 min-w-0">
-                                <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200/80 flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
-                                  {emp.avatar ? (
-                                    <img src={emp.avatar} alt={emp.name} className="w-full h-full object-cover" />
-                                  ) : (
-                                    <span className="text-xs font-black text-brand-green">{emp.name.charAt(0).toUpperCase()}</span>
-                                  )}
+                            <div className="flex items-start justify-between gap-2.5">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="relative">
+                                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-200/80 flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
+                                    {emp.avatar ? (
+                                      <img src={emp.avatar} alt={emp.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                      <span className="text-xs font-black text-brand-green">{emp.name.charAt(0).toUpperCase()}</span>
+                                    )}
+                                  </div>
+                                  <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${
+                                    isAbsent ? 'bg-rose-500' : isLeave ? 'bg-blue-500' : isLate ? 'bg-amber-500' : isPresent ? 'bg-emerald-500' : 'bg-slate-300'
+                                  }`} />
                                 </div>
                                 <div className="min-w-0">
-                                  <div className="font-bold text-slate-800 text-xs truncate">
+                                  <div className="font-extrabold text-slate-800 text-xs truncate">
                                     {lang === 'bn' ? emp.nameBn : emp.name}
                                   </div>
-                                  <div className="flex items-center gap-1.5 text-[9.5px] text-slate-400 font-medium">
-                                    <span className="font-mono font-bold text-slate-600">{emp.id}</span>
-                                    <span>•</span>
-                                    <span className="truncate">{lang === 'bn' ? emp.designationBn : emp.designation}</span>
+                                  <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-medium mt-0.5">
+                                    <span className="font-mono font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200/60">{emp.id}</span>
                                   </div>
                                 </div>
                               </div>
 
                               <div className="flex items-center gap-2 shrink-0">
                                 <div className="flex flex-col items-end gap-1">
-                                  <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                                  <span className={`inline-flex px-2.5 py-1 rounded-full text-[9.5px] font-extrabold border ${
                                     isAbsent
-                                      ? 'bg-red-50 text-red-600 border border-red-200' 
+                                      ? 'bg-rose-50 text-rose-600 border-rose-200' 
                                       : isLeave
-                                        ? 'bg-blue-50 text-blue-600 border border-blue-200'
+                                        ? 'bg-blue-50 text-blue-600 border-blue-200'
                                         : isLate 
-                                          ? 'bg-amber-50 text-amber-600 border border-amber-200' 
-                                          : 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+                                          ? 'bg-amber-50 text-amber-700 border-amber-200' 
+                                          : 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                   }`}>
                                     {isAbsent
                                       ? (lang === 'bn' ? 'অনুপস্থিত' : 'Absent')
@@ -5427,7 +5612,7 @@ export default function Dashboard() {
                                         ? (lang === 'bn' ? 'ছুটি' : 'On Leave')
                                         : isLate 
                                           ? (lang === 'bn' ? 'বিলম্বে' : 'Late') 
-                                          : (lang === 'bn' ? 'যথাসময়ে' : 'Present')}
+                                          : (lang === 'bn' ? 'উপস্থিত' : 'Present')}
                                   </span>
 
                                   {log.markedBy && (
@@ -5441,23 +5626,23 @@ export default function Dashboard() {
                                   )}
                                 </div>
 
-                                <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-transform duration-200 ${isExpanded ? 'rotate-180 bg-brand-green/10 text-brand-green' : 'text-slate-400'}`}>
+                                <div className={`w-7 h-7 rounded-xl flex items-center justify-center transition-transform duration-200 ${isExpanded ? 'rotate-180 bg-brand-green/10 text-brand-green' : 'bg-slate-100 text-slate-400'}`}>
                                   <ChevronDown size={14} />
                                 </div>
                               </div>
                             </div>
 
                             {/* In / Out Quick Grid */}
-                            <div className="grid grid-cols-2 gap-2 bg-slate-50/80 p-2 rounded-xl border border-slate-100 text-[11px]">
+                            <div className="grid grid-cols-2 gap-2 bg-slate-50/90 p-2.5 rounded-xl border border-slate-200/70 text-[11px]">
                               <div className="flex items-center gap-1.5">
                                 <Clock size={12} className="text-emerald-500 shrink-0" />
                                 <span className="text-slate-400 text-[10px]">{lang === 'bn' ? 'প্রবেশ:' : 'In:'}</span>
-                                <span className="font-mono font-bold text-slate-800">{log.checkIn && log.checkIn !== '-' ? log.checkIn : '-'}</span>
+                                <span className="font-mono font-bold text-slate-800 text-[10.5px]">{log.checkIn && log.checkIn !== '-' ? log.checkIn : '-'}</span>
                               </div>
                               <div className="flex items-center gap-1.5">
                                 <Clock size={12} className="text-amber-500 shrink-0" />
                                 <span className="text-slate-400 text-[10px]">{lang === 'bn' ? 'প্রস্থান:' : 'Out:'}</span>
-                                <span className="font-mono font-bold text-slate-800">{log.checkOut && log.checkOut !== '-' ? log.checkOut : (isPresent && attendanceDate === new Date().toISOString().split('T')[0] ? (lang === 'bn' ? 'কর্মরত...' : 'Working...') : '-')}</span>
+                                <span className="font-mono font-bold text-slate-800 text-[10.5px]">{log.checkOut && log.checkOut !== '-' ? log.checkOut : (isPresent && attendanceDate === new Date().toISOString().split('T')[0] ? (lang === 'bn' ? 'কর্মরত...' : 'Working...') : '-')}</span>
                               </div>
                             </div>
 
@@ -5467,7 +5652,7 @@ export default function Dashboard() {
                                 <span>{lang === 'bn' ? 'সময়:' : 'Duration:'}</span>
                                 <span className="font-bold text-slate-800">{metrics.duration}</span>
                                 <span>•</span>
-                                <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold border ${metrics.badgeColor}`}>
+                                <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[9px] font-bold border ${metrics.badgeColor}`}>
                                   {metrics.badgeLabel}
                                 </span>
                               </div>
@@ -5478,7 +5663,7 @@ export default function Dashboard() {
                                   e.stopPropagation();
                                   openManualAdjustmentModal(emp.id, attendanceDate);
                                 }}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold text-slate-700 hover:text-brand-green bg-white hover:bg-brand-green/5 border border-slate-200 hover:border-brand-green/30 rounded-lg shadow-2xs transition-all cursor-pointer"
+                                className="inline-flex items-center gap-1 px-3 py-1.5 text-[10.5px] font-bold text-slate-700 hover:text-brand-green bg-slate-100/80 hover:bg-brand-green/10 border border-slate-200 hover:border-brand-green/30 rounded-xl shadow-2xs transition-all cursor-pointer"
                               >
                                 <Edit3 size={11} className="text-brand-green" />
                                 <span>{lang === 'bn' ? 'সমন্বয়' : 'Adjust'}</span>
@@ -5489,18 +5674,18 @@ export default function Dashboard() {
                             {isExpanded && (
                               <div 
                                 onClick={(e) => e.stopPropagation()}
-                                className="pt-2.5 border-t border-slate-200/80 space-y-2 text-[11px] animate-fade-in"
+                                className="pt-3 border-t border-slate-100 space-y-2 text-[11px] animate-fade-in"
                               >
-                                <div className="flex items-center justify-between bg-white p-2 rounded-xl border border-slate-200/60">
-                                  <span className="text-slate-500 text-[10px] font-medium">{lang === 'bn' ? 'নির্ধারিত ডিউটি:' : 'Shift Duty:'}</span>
+                                <div className="flex items-center justify-between bg-slate-50 p-2.5 rounded-xl border border-slate-200/60">
+                                  <span className="text-slate-500 text-[10.5px] font-medium">{lang === 'bn' ? 'নির্ধারিত ডিউটি:' : 'Shift Duty:'}</span>
                                   <span className="font-bold text-slate-800">{emp.shiftStartTime || '09:00'} ({lang === 'bn' ? '৮ ঘণ্টা শিফট' : '8h Shift'})</span>
                                 </div>
-                                <div className="flex items-center justify-between bg-white p-2 rounded-xl border border-slate-200/60">
-                                  <span className="text-slate-500 text-[10px] font-medium">{lang === 'bn' ? 'কাজের সময়:' : 'Work Duration:'}</span>
+                                <div className="flex items-center justify-between bg-slate-50 p-2.5 rounded-xl border border-slate-200/60">
+                                  <span className="text-slate-500 text-[10.5px] font-medium">{lang === 'bn' ? 'কাজের সময়:' : 'Work Duration:'}</span>
                                   <span className="font-bold text-slate-800">{metrics.duration}</span>
                                 </div>
-                                <div className="flex items-center justify-between bg-white p-2 rounded-xl border border-slate-200/60">
-                                  <span className="text-slate-500 text-[10px] font-medium">{lang === 'bn' ? 'ওভারটাইম / শর্টফল:' : 'OT / Shortfall:'}</span>
+                                <div className="flex items-center justify-between bg-slate-50 p-2.5 rounded-xl border border-slate-200/60">
+                                  <span className="text-slate-500 text-[10.5px] font-medium">{lang === 'bn' ? 'ওভারটাইম / শর্টফল:' : 'OT / Shortfall:'}</span>
                                   <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9.5px] font-semibold border ${metrics.badgeColor}`}>
                                     {metrics.badgeType === 'overtime' && <TrendingUp size={11} className="text-emerald-600 shrink-0" />}
                                     {metrics.badgeType === 'shortfall' && <ArrowDownRight size={11} className="text-orange-600 shrink-0" />}
@@ -5509,15 +5694,15 @@ export default function Dashboard() {
                                     <span>{metrics.badgeLabel}</span>
                                   </span>
                                 </div>
-                                <div className="flex items-center justify-between bg-white p-2 rounded-xl border border-slate-200/60">
-                                  <span className="text-slate-500 text-[10px] font-medium">{lang === 'bn' ? 'লোকেশন:' : 'Location:'}</span>
-                                  <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-800 truncate max-w-[200px]">
-                                    <MapPin size={10} className="text-emerald-600 shrink-0" />
+                                <div className="flex items-center justify-between bg-slate-50 p-2.5 rounded-xl border border-slate-200/60">
+                                  <span className="text-slate-500 text-[10.5px] font-medium">{lang === 'bn' ? 'লোকেশন:' : 'Location:'}</span>
+                                  <span className="inline-flex items-center gap-1 text-[10.5px] font-medium text-emerald-800 truncate max-w-[200px]">
+                                    <MapPin size={11} className="text-emerald-600 shrink-0" />
                                     <span className="truncate">{formatLocation(log.location || (isPresent ? (lang === 'bn' ? 'স্মার্ট ট্রেডিং শপ' : 'Smart Trading Shop') : '-'))}</span>
                                   </span>
                                 </div>
                                 {log.note && (
-                                  <div className="bg-amber-50/60 p-2 rounded-xl border border-amber-200/60 text-[10.5px] text-amber-900">
+                                  <div className="bg-amber-50/70 p-2.5 rounded-xl border border-amber-200/60 text-[11px] text-amber-900">
                                     <span className="font-bold text-amber-800 block mb-0.5">{lang === 'bn' ? 'নোট:' : 'Note:'}</span>
                                     {log.note}
                                   </div>
@@ -5545,8 +5730,8 @@ export default function Dashboard() {
                             <th className="px-4 py-3.5 text-right">{lang === 'bn' ? 'অ্যাকশন' : 'Action'}</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 text-slate-650">
-                          {displayedEmployees.map((emp) => {
+                        <tbody className="text-slate-650">
+                          {displayedEmployees.map((emp, empIdx) => {
                             const log = getEmployeeAttendanceRecord(emp.id, attendanceDate);
                             const metrics = getAttendanceMetrics(log);
                             const isPresent = log.status === 'On-Time' || (log.checkIn && log.checkIn !== '-');
@@ -5559,32 +5744,39 @@ export default function Dashboard() {
                               <React.Fragment key={emp.id}>
                                 <tr 
                                   onClick={() => setExpandedAttendanceEmpId(isExpanded ? null : emp.id)}
-                                  className={`cursor-pointer transition-colors ${isExpanded ? 'bg-emerald-50/30 font-medium' : 'hover:bg-slate-50/70'}`}
+                                  className={`cursor-pointer transition-all border-b border-slate-100 ${
+                                    isExpanded 
+                                      ? 'bg-brand-green/5 border-brand-green/20' 
+                                      : empIdx % 2 === 0 
+                                        ? 'bg-white hover:bg-slate-50' 
+                                        : 'bg-slate-50/60 hover:bg-slate-100/60'
+                                  }`}
                                   title={lang === 'bn' ? 'বিস্তারিত দেখতে বা লুকাতে ক্লিক করুন' : 'Click to expand/collapse details'}
                                 >
                                   {/* Employee Info with expand chevron */}
-                                  <td className="px-4 py-3.5">
-                                    <div className="flex items-center gap-2.5">
+                                  <td className="px-4 py-4">
+                                    <div className="flex items-center gap-3">
                                       <div className={`w-5 h-5 rounded-full flex items-center justify-center transition-transform duration-200 shrink-0 ${isExpanded ? 'rotate-180 text-brand-green' : 'text-slate-400'}`}>
                                         <ChevronDown size={14} />
                                       </div>
-                                      <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200/80 flex items-center justify-center overflow-hidden shrink-0">
-                                        {emp.avatar ? (
-                                          <img src={emp.avatar} alt={emp.name} className="w-full h-full object-cover" />
-                                        ) : (
-                                          <span className="text-[10px] font-bold text-brand-green">{emp.name.charAt(0).toUpperCase()}</span>
-                                        )}
+                                      <div className="relative shrink-0">
+                                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-200/80 flex items-center justify-center overflow-hidden shadow-2xs">
+                                          {emp.avatar ? (
+                                            <img src={emp.avatar} alt={emp.name} className="w-full h-full object-cover" />
+                                          ) : (
+                                            <span className="text-[11px] font-black text-brand-green">{emp.name.charAt(0).toUpperCase()}</span>
+                                          )}
+                                        </div>
+                                        <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white ${
+                                          isAbsent ? 'bg-rose-500' : isLeave ? 'bg-blue-500' : isLate ? 'bg-amber-500' : isPresent ? 'bg-emerald-500' : 'bg-slate-300'
+                                        }`} />
                                       </div>
                                       <div>
                                         <div className="font-bold text-slate-800 text-[11px] leading-tight">
                                           {lang === 'bn' ? emp.nameBn : emp.name}
                                         </div>
                                         <div className="flex items-center gap-1.5 mt-0.5">
-                                          <span className="text-[9px] text-slate-400 font-mono font-bold">{emp.id}</span>
-                                          <span className="text-[9px] text-slate-400">•</span>
-                                          <span className="text-[9px] text-slate-500 font-medium">
-                                            {lang === 'bn' ? emp.designationBn : emp.designation}
-                                          </span>
+                                          <span className="text-[9px] text-slate-500 font-mono font-bold bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200/60">{emp.id}</span>
                                         </div>
                                       </div>
                                     </div>
@@ -6531,22 +6723,7 @@ export default function Dashboard() {
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
-                        {lang === 'bn' ? 'পদবী (Designation)' : 'Designation'}
-                      </label>
-                      <input
-                        type="text"
-                        placeholder={lang === 'bn' ? 'যেমন: সেলস এক্সিকিউটিভ / শপ ম্যানেজার' : 'e.g. Sales Executive / Shop Manager'}
-                        value={newDesignation}
-                        onChange={(e) => {
-                          setNewDesignation(e.target.value);
-                          setNewDesignationBn(e.target.value);
-                        }}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs focus:border-brand-green outline-none font-bold text-slate-800"
-                        required
-                      />
-                    </div>
+
 
                     <div>
                       <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
@@ -6767,22 +6944,7 @@ export default function Dashboard() {
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
-                        {lang === 'bn' ? 'পদবী (Designation)' : 'Designation'}
-                      </label>
-                      <input
-                        type="text"
-                        placeholder={lang === 'bn' ? 'যেমন: সেলস এক্সিকিউটিভ / শপ ম্যানেজার' : 'e.g. Sales Executive / Shop Manager'}
-                        value={newDesignation}
-                        onChange={(e) => {
-                          setNewDesignation(e.target.value);
-                          setNewDesignationBn(e.target.value);
-                        }}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs focus:border-brand-green outline-none font-bold text-slate-800"
-                        required
-                      />
-                    </div>
+
 
                     <div>
                       <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
@@ -6878,58 +7040,61 @@ export default function Dashboard() {
                   </div>
 
                   {/* Mobile Cards View (md:hidden) */}
-                  <div className="md:hidden divide-y divide-slate-100 overflow-y-auto flex-1 min-h-0">
+                  <div className="md:hidden p-3.5 sm:p-4 bg-slate-50/50 space-y-3.5 overflow-y-auto flex-1 min-h-0">
                     {employeesList.map((emp) => (
                       <div 
                         key={emp.id} 
-                        className="p-4 space-y-3 hover:bg-slate-50/60 transition-colors"
+                        className="bg-white border border-slate-200/85 rounded-2xl p-4 shadow-xs hover:border-brand-green/40 hover:shadow-md transition-all space-y-3.5"
                       >
                         {/* Top: Avatar, Name, ID, Designation & Salary Badge */}
-                        <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start justify-between gap-2.5">
                           <div 
                             onClick={() => setActiveEmpProfileId(emp.id)} 
                             className="flex items-center gap-3 min-w-0 cursor-pointer"
                             title={lang === 'bn' ? `${emp.nameBn} এর প্রোফাইল দেখুন` : `View ${emp.name}'s profile`}
                           >
-                            <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200/80 flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
-                              {emp.avatar ? (
-                                <img src={emp.avatar} alt={emp.name} className="w-full h-full object-cover" />
-                              ) : (
-                                <span className="text-xs font-black text-brand-green">{emp.name.charAt(0).toUpperCase()}</span>
-                              )}
+                            <div className="relative">
+                              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-200/80 flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
+                                {emp.avatar ? (
+                                  <img src={emp.avatar} alt={emp.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <span className="text-sm font-black text-brand-green">{emp.name.charAt(0).toUpperCase()}</span>
+                                )}
+                              </div>
+                              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />
                             </div>
                             <div className="min-w-0">
-                              <div className="font-bold text-slate-800 text-xs hover:text-brand-green transition-colors truncate">
+                              <div className="font-extrabold text-slate-800 text-xs hover:text-brand-green transition-colors truncate">
                                 {lang === 'bn' ? emp.nameBn : emp.name}
                               </div>
-                              <div className="flex items-center gap-1.5 text-[9.5px] text-slate-400 font-medium">
-                                <span className="font-mono font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">{emp.id}</span>
+                              <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-medium mt-0.5">
+                                <span className="font-mono font-bold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200/60">{emp.id}</span>
                                 <span>•</span>
                                 <span className="truncate">{lang === 'bn' ? emp.designationBn : emp.designation}</span>
                               </div>
                             </div>
                           </div>
 
-                          <div className="text-right shrink-0">
-                            <span className="inline-flex px-2 py-0.5 rounded-full text-[9.5px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200 font-sans">
+                          <div className="text-right shrink-0 bg-emerald-50/80 border border-emerald-200/80 px-2.5 py-1 rounded-xl">
+                            <span className="block text-[8px] text-emerald-700 font-bold uppercase tracking-wider">{lang === 'bn' ? 'মূল বেতন' : 'Basic Pay'}</span>
+                            <span className="text-xs font-black text-emerald-800 font-sans">
                               ৳{emp.baseSalary.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}
-                            </span>
-                            <span className="block text-[8.5px] text-slate-400 font-bold mt-0.5">
-                              {lang === 'bn' ? 'মাসিক মূল বেতন' : 'Basic / mo'}
                             </span>
                           </div>
                         </div>
 
-                        {/* Duty & Shift chip */}
-                        <div className="flex items-center gap-2 text-[10px] text-slate-500 bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-200/60">
-                          <Clock size={11} className="text-slate-400 shrink-0" />
-                          <span>
-                            {lang === 'bn' ? `ডিউটি শুরুর সময়: ${emp.shiftStartTime || '09:00 AM'}` : `Duty Start: ${emp.shiftStartTime || '09:00 AM'}`}
-                          </span>
-                          <span className="text-slate-300">•</span>
-                          <span>
-                            {lang === 'bn' ? `যোগদান: ${emp.joiningDate}` : `Joined: ${emp.joiningDate}`}
-                          </span>
+                        {/* Duty & Shift Grid */}
+                        <div className="grid grid-cols-2 gap-2 text-[10.5px] text-slate-600 bg-slate-50/90 p-2.5 rounded-xl border border-slate-200/70">
+                          <div className="flex items-center gap-1.5">
+                            <Clock size={12} className="text-slate-400 shrink-0" />
+                            <span className="text-slate-400 text-[10px]">{lang === 'bn' ? 'শিফট:' : 'Shift:'}</span>
+                            <span className="font-bold text-slate-700">{emp.shiftStartTime || '09:00 AM'} (৮ ঘ.)</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <Calendar size={12} className="text-slate-400 shrink-0" />
+                            <span className="text-slate-400 text-[10px]">{lang === 'bn' ? 'যোগদান:' : 'Joined:'}</span>
+                            <span className="font-bold text-slate-700 font-mono text-[10px]">{emp.joiningDate || '-'}</span>
+                          </div>
                         </div>
 
                         {/* Login Credentials Box with 1-tap Copy */}
@@ -6937,16 +7102,16 @@ export default function Dashboard() {
                           onClick={(e) => {
                             e.stopPropagation();
                             const textToCopy = `স্মার্ট ট্রেডিং লগইন তথ্য:
-কর্মকর্তার নাম: ${emp.nameBn} (${emp.name})
-আইডি: ${emp.id}
-ইমেইল: ${emp.email}
-পাসওয়ার্ড: ${emp.password || '1234'}
-লগইন লিঙ্ক: ${window.location.origin}/login`;
+ কর্মকর্তার নাম: ${emp.nameBn} (${emp.name})
+ আইডি: ${emp.id}
+ ইমেইল: ${emp.email}
+ পাসওয়ার্ড: ${emp.password || '1234'}
+ লগইন লিঙ্ক: ${window.location.origin}/login`;
                             navigator.clipboard.writeText(textToCopy);
                             setCopiedEmailId(emp.id);
                             setTimeout(() => setCopiedEmailId(null), 2000);
                           }}
-                          className="flex items-center justify-between gap-2 p-2.5 bg-slate-50/90 hover:bg-emerald-50/60 border border-slate-200/80 hover:border-emerald-300 rounded-xl transition-all cursor-pointer shadow-2xs"
+                          className="flex items-center justify-between gap-2 p-2.5 bg-slate-50/80 hover:bg-emerald-50/60 border border-slate-200/80 hover:border-emerald-300 rounded-xl transition-all cursor-pointer shadow-2xs"
                           title={lang === 'bn' ? 'ক্লিক করে লগইন তথ্য কপি করুন' : 'Click to copy login credentials'}
                         >
                           <div className="min-w-0 flex-1">
@@ -6967,16 +7132,16 @@ export default function Dashboard() {
                             onClick={(e) => {
                               e.stopPropagation();
                               const textToCopy = `স্মার্ট ট্রেডিং লগইন তথ্য:
-কর্মকর্তার নাম: ${emp.nameBn} (${emp.name})
-আইডি: ${emp.id}
-ইমেইল: ${emp.email}
-পাসওয়ার্ড: ${emp.password || '1234'}
-লগইন লিঙ্ক: ${window.location.origin}/login`;
+ কর্মকর্তার নাম: ${emp.nameBn} (${emp.name})
+ আইডি: ${emp.id}
+ ইমেইল: ${emp.email}
+ পাসওয়ার্ড: ${emp.password || '1234'}
+ লগইন লিঙ্ক: ${window.location.origin}/login`;
                               navigator.clipboard.writeText(textToCopy);
                               setCopiedEmailId(emp.id);
                               setTimeout(() => setCopiedEmailId(null), 2000);
                             }}
-                            className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1 border ${
+                            className={`px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1 border ${
                               copiedEmailId === emp.id 
                                 ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm' 
                                 : 'bg-white hover:bg-emerald-100 text-slate-600 border-slate-200'
@@ -7001,7 +7166,7 @@ export default function Dashboard() {
                           <button
                             type="button"
                             onClick={() => setActiveEmpProfileId(emp.id)}
-                            className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer border-0"
+                            className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-slate-100/90 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer border-0"
                           >
                             <User size={13} className="text-slate-500" />
                             <span>{lang === 'bn' ? 'প্রোফাইল ও বেতন' : 'Profile & Salary'}</span>
@@ -7036,12 +7201,13 @@ export default function Dashboard() {
                   {/* Desktop Table View (hidden md:block) */}
                   <div className="hidden md:block overflow-y-auto flex-1 min-h-0">
                     <table className="w-full border-collapse text-left text-xs">
-                      <thead className="bg-slate-50 sticky top-0 font-bold text-slate-500 uppercase tracking-wider text-[9px] border-b border-slate-100">
+                      <thead className="bg-slate-50 sticky top-0 font-bold text-slate-500 uppercase tracking-wider text-[9px] border-b border-slate-100 z-10">
                         <tr>
-                          <th className="px-5 py-3.5">{lang === 'bn' ? 'আইডি' : 'ID'}</th>
-                          <th className="px-5 py-3.5">{lang === 'bn' ? 'নাম ও পদবী' : 'Employee & Role'}</th>
-                          <th className="px-5 py-3.5 hidden md:table-cell">{lang === 'bn' ? 'লগইন তথ্য' : 'Login Info'}</th>
-                          <th className="px-5 py-3.5 text-right">{lang === 'bn' ? 'অ্যাকশন' : 'Action'}</th>
+                          <th className="px-5 py-4">{lang === 'bn' ? 'আইডি' : 'ID'}</th>
+                          <th className="px-5 py-4">{lang === 'bn' ? 'কর্মকর্তা ও পদবী' : 'Employee & Role'}</th>
+                          <th className="px-5 py-4">{lang === 'bn' ? 'শিফট ও মূল বেতন' : 'Shift & Basic Salary'}</th>
+                          <th className="px-5 py-4 hidden lg:table-cell">{lang === 'bn' ? 'লগইন অ্যাক্সেস' : 'Login Access'}</th>
+                          <th className="px-5 py-4 text-right">{lang === 'bn' ? 'অ্যাকশন' : 'Action'}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 text-slate-650">
@@ -7052,10 +7218,12 @@ export default function Dashboard() {
                             className="hover:bg-slate-50/80 transition-colors cursor-pointer font-sans"
                             title={lang === 'bn' ? `${emp.nameBn} এর প্রোফাইল দেখুন` : `View ${emp.name}'s profile`}
                           >
-                            <td className="px-5 py-3.5 font-bold font-mono text-slate-800 whitespace-nowrap">{emp.id}</td>
-                            <td className="px-5 py-3.5">
+                            <td className="px-5 py-4 font-bold font-mono text-slate-800 whitespace-nowrap">
+                              <span className="bg-slate-100 px-2 py-1 rounded-lg border border-slate-200/70">{emp.id}</span>
+                            </td>
+                            <td className="px-5 py-4">
                               <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200/80 flex items-center justify-center overflow-hidden shrink-0 shadow-xs">
+                                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-200/80 flex items-center justify-center overflow-hidden shrink-0 shadow-xs">
                                   {emp.avatar ? (
                                     <img src={emp.avatar} alt={emp.name} className="w-full h-full object-cover" />
                                   ) : (
@@ -7063,23 +7231,32 @@ export default function Dashboard() {
                                   )}
                                 </div>
                                 <div>
-                                  <div className="font-bold text-slate-800 hover:text-brand-green transition-colors">{lang === 'bn' ? emp.nameBn : emp.name}</div>
-                                  <span className="text-[10px] text-slate-400 font-sans block">
-                                    {lang === 'bn' ? emp.designationBn : emp.designation} • {lang === 'bn' ? `ডিউটি: ${emp.shiftStartTime || '09:00'} | মূল বেতন: ৳${emp.baseSalary.toLocaleString('bn-BD')}` : `Shift: ${emp.shiftStartTime || '09:00'} | Basic: ৳${emp.baseSalary.toLocaleString()}`}
+                                  <div className="font-extrabold text-slate-800 hover:text-brand-green transition-colors text-xs">{lang === 'bn' ? emp.nameBn : emp.name}</div>
+                                  <span className="text-[10.5px] text-slate-500 font-sans block mt-0.5">
+                                    {lang === 'bn' ? emp.designationBn : emp.designation}
                                   </span>
                                 </div>
                               </div>
                             </td>
-                            <td className="px-5 py-3.5 hidden md:table-cell" onClick={(e) => e.stopPropagation()}>
+                            <td className="px-5 py-4 whitespace-nowrap">
+                              <div className="space-y-0.5">
+                                <div className="font-black text-slate-800 text-xs font-sans">৳{emp.baseSalary.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</div>
+                                <div className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
+                                  <Clock size={10} className="text-slate-400" />
+                                  <span>{emp.shiftStartTime || '09:00 AM'} (৮ ঘণ্টা)</span>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-5 py-4 hidden lg:table-cell" onClick={(e) => e.stopPropagation()}>
                               <div 
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   const textToCopy = `স্মার্ট ট্রেডিং লগইন তথ্য:
-কর্মকর্তার নাম: ${emp.nameBn} (${emp.name})
-আইডি: ${emp.id}
-ইমেইল: ${emp.email}
-পাসওয়ার্ড: ${emp.password || '1234'}
-লগইন লিঙ্ক: ${window.location.origin}/login`;
+ কর্মকর্তার নাম: ${emp.nameBn} (${emp.name})
+ আইডি: ${emp.id}
+ ইমেইল: ${emp.email}
+ পাসওয়ার্ড: ${emp.password || '1234'}
+ লগইন লিঙ্ক: ${window.location.origin}/login`;
                                   navigator.clipboard.writeText(textToCopy);
                                   setCopiedEmailId(emp.id);
                                   setTimeout(() => setCopiedEmailId(null), 2000);
@@ -7105,11 +7282,11 @@ export default function Dashboard() {
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     const textToCopy = `স্মার্ট ট্রেডিং লগইন তথ্য:
-কর্মকর্তার নাম: ${emp.nameBn} (${emp.name})
-আইডি: ${emp.id}
-ইমেইল: ${emp.email}
-পাসওয়ার্ড: ${emp.password || '1234'}
-লগইন লিঙ্ক: ${window.location.origin}/login`;
+ কর্মকর্তার নাম: ${emp.nameBn} (${emp.name})
+ আইডি: ${emp.id}
+ ইমেইল: ${emp.email}
+ পাসওয়ার্ড: ${emp.password || '1234'}
+ লগইন লিঙ্ক: ${window.location.origin}/login`;
                                     navigator.clipboard.writeText(textToCopy);
                                     setCopiedEmailId(emp.id);
                                     setTimeout(() => setCopiedEmailId(null), 2000);
@@ -7135,7 +7312,7 @@ export default function Dashboard() {
                                 </button>
                               </div>
                             </td>
-                            <td className="px-5 py-3.5 text-right whitespace-nowrap">
+                            <td className="px-5 py-4 text-right whitespace-nowrap">
                               <div className="flex items-center justify-end gap-2">
                                 <button
                                   onClick={(e) => {
@@ -7144,7 +7321,7 @@ export default function Dashboard() {
                                     generateAttendanceReport(undefined, emp.id);
                                     navigate('/dashboard?tab=report');
                                   }}
-                                  className="text-brand-green hover:text-brand-green-dark p-1.5 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer border border-brand-green/20 bg-emerald-50/40 flex items-center gap-1 text-[10px] font-bold"
+                                  className="text-brand-green hover:text-brand-green-dark p-2 hover:bg-emerald-50 rounded-xl transition-colors cursor-pointer border border-brand-green/20 bg-emerald-50/40 flex items-center gap-1.5 text-[11px] font-bold shadow-2xs"
                                   title={lang === 'bn' ? 'হাজিরা ও লেট হিসাব দেখুন' : 'View Attendance Sheet'}
                                 >
                                   <FileText size={13} />
@@ -7155,7 +7332,7 @@ export default function Dashboard() {
                                     e.stopPropagation();
                                     handleDeleteEmployee(emp.id);
                                   }}
-                                  className="text-red-500 hover:text-red-700 p-1.5 hover:bg-red-50 rounded-lg transition-colors cursor-pointer border-0"
+                                  className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-xl transition-colors cursor-pointer border border-red-200/50 shadow-2xs"
                                   title={lang === 'bn' ? 'অপসারণ করুন' : 'Delete Employee'}
                                 >
                                   <Trash2 size={15} />
@@ -7188,7 +7365,7 @@ export default function Dashboard() {
                     </span>
                   </div>
 
-                  <div className="divide-y divide-slate-100 overflow-y-auto flex-1 min-h-0">
+                  <div className="p-3.5 sm:p-4 bg-slate-50/50 space-y-3.5 overflow-y-auto flex-1 min-h-0">
                     {employeesList.map((emp) => {
                       const calc = calculateMonthlySalary(emp, selectedProfileMonth, holidaysList);
                       const calculatedPay = calc.netPayable;
@@ -7203,115 +7380,121 @@ export default function Dashboard() {
                       }
                       const monthPaymentDetail = parsedDetails[selectedProfileMonth];
                       
-                      let badgeColor = 'bg-rose-50 text-rose-600 border border-rose-100';
+                      let badgeColor = 'bg-rose-50 text-rose-600 border border-rose-200';
                       let badgeText = lang === 'bn' ? 'বকেয়া' : 'Unpaid';
                       let isPaidFully = false;
                       
                       if (monthPaymentDetail) {
                         if (monthPaymentDetail.type === 'full' || monthPaymentDetail.dueAmount === 0) {
-                          badgeColor = 'bg-emerald-50 text-emerald-600 border border-emerald-100';
+                          badgeColor = 'bg-emerald-50 text-emerald-700 border border-emerald-200';
                           badgeText = lang === 'bn' ? 'পরিশোধিত' : 'Paid';
                           isPaidFully = true;
                         } else if (monthPaymentDetail.dueAmount > 0) {
-                          badgeColor = 'bg-amber-50 text-amber-600 border border-amber-100';
+                          badgeColor = 'bg-amber-50 text-amber-700 border border-amber-200';
                           badgeText = lang === 'bn' 
                             ? `আংশিক (বকেয়া: ৳${monthPaymentDetail.dueAmount.toLocaleString()})` 
                             : `Partial (Due: ৳${monthPaymentDetail.dueAmount.toLocaleString()})`;
                         } else if (monthPaymentDetail.type === 'advance') {
-                          badgeColor = 'bg-blue-50 text-blue-600 border border-blue-100';
+                          badgeColor = 'bg-blue-50 text-blue-700 border border-blue-200';
                           badgeText = lang === 'bn' ? 'অগ্রিম' : 'Advance';
                         }
                       }
 
                       return (
-                        <div key={emp.id} className="transition-all duration-200 select-none">
+                        <div 
+                          key={emp.id} 
+                          className={`bg-white border rounded-2xl shadow-xs transition-all duration-200 select-none overflow-hidden ${
+                            isExpanded ? 'border-brand-green/50 shadow-md ring-1 ring-brand-green/20' : 'border-slate-200/85 hover:border-slate-300 hover:shadow-sm'
+                          }`}
+                        >
                           {/* Collapsed Row Header */}
                           <div
                             onClick={() => setExpandedSalaryEmpId(isExpanded ? null : emp.id)}
-                            className={`py-3.5 px-5 flex items-center justify-between gap-4 cursor-pointer hover:bg-slate-50/50 transition-colors ${
-                              isExpanded ? 'bg-slate-50/30' : ''
-                            }`}
+                            className="p-4 flex items-center justify-between gap-3.5 cursor-pointer hover:bg-slate-50/60 transition-colors"
                           >
                             <div className="flex-1 min-w-0 flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200/80 flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
+                              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-200/80 flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
                                 {emp.avatar ? (
                                   <img src={emp.avatar} alt={emp.name} className="w-full h-full object-cover" />
                                 ) : (
-                                  <span className="text-[11px] font-black text-brand-green">{emp.name.charAt(0).toUpperCase()}</span>
+                                  <span className="text-xs font-black text-brand-green">{emp.name.charAt(0).toUpperCase()}</span>
                                 )}
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="font-bold text-slate-800 text-xs leading-tight">
+                                  <span className="font-extrabold text-slate-900 text-xs leading-tight">
                                     {lang === 'bn' ? emp.nameBn : emp.name}
                                   </span>
-                                  <span className={`inline-flex px-2 py-0.2 rounded-full text-[8.5px] font-bold ${badgeColor}`}>
+                                  <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold ${badgeColor}`}>
                                     {badgeText}
                                   </span>
                                 </div>
-                                <span className="text-[10px] text-slate-400 font-mono flex items-center gap-1 mt-0.5">
-                                  <Clock size={10} className="text-slate-400 shrink-0" />
-                                  <span>ID: {emp.id} | {lang === 'bn' ? `ডিউটি: ${emp.shiftStartTime || '09:00'}` : `Shift: ${emp.shiftStartTime || '09:00'}`}</span>
-                                </span>
+                                <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-medium mt-0.5">
+                                  <span className="font-mono font-bold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200/60">{emp.id}</span>
+                                  <span>•</span>
+                                  <span>{lang === 'bn' ? `ডিউটি: ${emp.shiftStartTime || '09:00'}` : `Shift: ${emp.shiftStartTime || '09:00'}`}</span>
+                                </div>
                               </div>
                             </div>
 
                             <div className="flex items-center gap-3 shrink-0">
-                              <div className="text-right">
-                                <span className="text-[10px] text-slate-400 font-bold block">
+                              <div className="text-right bg-emerald-50/80 border border-emerald-200/80 px-3 py-1.5 rounded-xl">
+                                <span className="text-[8px] text-emerald-700 font-bold uppercase tracking-wider block">
                                   {monthPaymentDetail?.dueAmount > 0 
                                     ? (lang === 'bn' ? 'অবশিষ্ট বকেয়া' : 'Remaining Due')
                                     : (lang === 'bn' ? 'প্রদেয় নিট বেতন' : 'Net Payable')}
                                 </span>
-                                <span className="text-brand-green font-black text-xs font-sans">
+                                <span className="text-emerald-800 font-black text-xs sm:text-sm font-sans">
                                   ৳{(monthPaymentDetail?.dueAmount > 0 ? monthPaymentDetail.dueAmount : calculatedPay).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}
                                 </span>
                               </div>
-                              <ChevronDown size={14} className={`text-slate-450 transition-transform duration-200 ${isExpanded ? 'rotate-180 text-brand-green' : ''}`} />
+                              <div className={`w-7 h-7 rounded-xl flex items-center justify-center transition-transform duration-200 ${isExpanded ? 'rotate-180 bg-brand-green/10 text-brand-green' : 'bg-slate-100 text-slate-400'}`}>
+                                <ChevronDown size={14} />
+                              </div>
                             </div>
                           </div>
 
                           {/* Expanded Details Panel */}
                           {isExpanded && (
-                            <div className="bg-slate-50/50 border-t border-b border-slate-100 px-5 py-4 space-y-4 text-xs animate-slide-down">
-                              <div className="grid grid-cols-2 md:grid-cols-3 gap-3.5">
-                                <div className="space-y-0.5 bg-white p-3 rounded-2xl border border-slate-200/50">
-                                  <span className="text-slate-400 text-[9px] font-bold uppercase block">{lang === 'bn' ? 'মূল বেতন (Basic)' : 'Base Salary'}</span>
-                                  <span className="font-bold text-slate-800 text-xs">৳{calc.baseSalary.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</span>
+                            <div className="bg-slate-50/70 border-t border-slate-100 p-4.5 sm:p-5 space-y-4 text-xs animate-slide-down">
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                <div className="space-y-0.5 bg-white p-3 rounded-2xl border border-slate-200/70 shadow-2xs">
+                                  <span className="text-slate-400 text-[9px] font-bold uppercase block tracking-wider">{lang === 'bn' ? 'মূল বেতন (Basic)' : 'Base Salary'}</span>
+                                  <span className="font-bold text-slate-800 text-xs sm:text-sm">৳{calc.baseSalary.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</span>
                                 </div>
-                                <div className="space-y-0.5 bg-white p-3 rounded-2xl border border-slate-200/50">
-                                  <span className="text-slate-400 text-[9px] font-bold uppercase block">{lang === 'bn' ? 'অনুপস্থিতি কর্তন' : 'Absent Deduction'}</span>
-                                  <span className="font-bold text-rose-600 text-xs">- ৳{calc.absentDeduction.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</span>
+                                <div className="space-y-0.5 bg-white p-3 rounded-2xl border border-slate-200/70 shadow-2xs">
+                                  <span className="text-slate-400 text-[9px] font-bold uppercase block tracking-wider">{lang === 'bn' ? 'অনুপস্থিতি কর্তন' : 'Absent Deduction'}</span>
+                                  <span className="font-bold text-rose-600 text-xs sm:text-sm">- ৳{calc.absentDeduction.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</span>
                                   <span className="text-[8.5px] text-slate-400 block font-bold">({calc.absentDaysCount} {lang === 'bn' ? 'দিন অনুপস্থিত' : 'days absent'})</span>
                                 </div>
-                                <div className="space-y-0.5 bg-white p-3 rounded-2xl border border-slate-200/50">
-                                  <span className="text-slate-400 text-[9px] font-bold uppercase block">{lang === 'bn' ? '৩ দিন লেট কর্তন' : 'Late Deduction (3:1)'}</span>
-                                  <span className="font-bold text-rose-600 text-xs">- ৳{calc.lateDeduction.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</span>
+                                <div className="space-y-0.5 bg-white p-3 rounded-2xl border border-slate-200/70 shadow-2xs">
+                                  <span className="text-slate-400 text-[9px] font-bold uppercase block tracking-wider">{lang === 'bn' ? '৩ দিন লেট কর্তন' : 'Late Deduction (3:1)'}</span>
+                                  <span className="font-bold text-rose-600 text-xs sm:text-sm">- ৳{calc.lateDeduction.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</span>
                                   <span className="text-[8.5px] text-slate-400 block font-bold">({calc.lateCount} {lang === 'bn' ? 'লেট =' : 'lates ='} {calc.lateCutDays} {lang === 'bn' ? 'দিন কাটা' : 'day cut'})</span>
                                 </div>
-                                <div className="space-y-0.5 bg-white p-3 rounded-2xl border border-slate-200/50">
-                                  <span className="text-slate-400 text-[9px] font-bold uppercase block">{lang === 'bn' ? 'শুক্রবার কাজের বোনাস' : 'Friday Work Bonus'}</span>
-                                  <span className="font-bold text-emerald-600 text-xs">+ ৳{calc.fridayBonus.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</span>
+                                <div className="space-y-0.5 bg-white p-3 rounded-2xl border border-slate-200/70 shadow-2xs">
+                                  <span className="text-slate-400 text-[9px] font-bold uppercase block tracking-wider">{lang === 'bn' ? 'শুক্রবার কাজের বোনাস' : 'Friday Work Bonus'}</span>
+                                  <span className="font-bold text-emerald-600 text-xs sm:text-sm">+ ৳{calc.fridayBonus.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</span>
                                   <span className="text-[8.5px] text-slate-400 block font-bold">({calc.fridayWorkedCount} {lang === 'bn' ? 'শুক্রবার ডিউটি' : 'Fridays worked'})</span>
                                 </div>
-                                <div className="space-y-0.5 bg-white p-3 rounded-2xl border border-slate-200/50">
-                                  <span className="text-slate-400 text-[9px] font-bold uppercase block">{lang === 'bn' ? 'ওভারটাইম আয়' : 'Overtime Pay'}</span>
-                                  <span className="font-bold text-emerald-600 text-xs">+ ৳{calc.otPay.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</span>
+                                <div className="space-y-0.5 bg-white p-3 rounded-2xl border border-slate-200/70 shadow-2xs">
+                                  <span className="text-slate-400 text-[9px] font-bold uppercase block tracking-wider">{lang === 'bn' ? 'ওভারটাইম আয়' : 'Overtime Pay'}</span>
+                                  <span className="font-bold text-emerald-600 text-xs sm:text-sm">+ ৳{calc.otPay.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</span>
                                   <span className="text-[8.5px] text-slate-400 block font-bold">({calc.otHours} {lang === 'bn' ? 'ঘণ্টা ওটি' : 'hours OT'})</span>
                                 </div>
-                                <div className="space-y-0.5 bg-white p-3 rounded-2xl border border-slate-200/50">
-                                  <span className="text-slate-400 text-[9px] font-bold uppercase block">{lang === 'bn' ? 'অগ্রিম ও অন্যান্য কর্তন' : 'Advance / Deduct'}</span>
-                                  <span className="font-bold text-amber-600 text-xs">- ৳{(calc.advanceSalary + calc.deductions).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</span>
+                                <div className="space-y-0.5 bg-white p-3 rounded-2xl border border-slate-200/70 shadow-2xs">
+                                  <span className="text-slate-400 text-[9px] font-bold uppercase block tracking-wider">{lang === 'bn' ? 'অগ্রিম ও অন্যান্য কর্তন' : 'Advance / Deduct'}</span>
+                                  <span className="font-bold text-amber-600 text-xs sm:text-sm">- ৳{(calc.advanceSalary + calc.deductions).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</span>
                                 </div>
                               </div>
 
                               {monthPaymentDetail && (
-                                <div className="bg-white border border-slate-200/40 p-3 rounded-2xl text-[10.5px] space-y-1 font-sans">
-                                  <span className="flex items-center gap-1 font-bold text-slate-700 uppercase text-[9px] tracking-wide text-brand-green">
-                                    <Wallet size={11} className="shrink-0" />
+                                <div className="bg-white border border-slate-200/70 p-3.5 rounded-2xl text-[10.5px] space-y-1.5 font-sans shadow-2xs">
+                                  <span className="flex items-center gap-1 font-bold text-slate-700 uppercase text-[9.5px] tracking-wide text-brand-green">
+                                    <Wallet size={12} className="shrink-0" />
                                     <span>{lang === 'bn' ? 'পরিশোধের লেনদেন বিবরণী' : 'Payment Transaction Details'}</span>
                                   </span>
-                                  <div className="grid grid-cols-2 gap-2 text-slate-600">
+                                  <div className="grid grid-cols-2 gap-2 text-slate-600 pt-0.5">
                                     <div>{lang === 'bn' ? 'পরিশোধের ধরণ:' : 'Payment Type:'} <span className="font-bold text-slate-800">{monthPaymentDetail.type === 'full' ? (lang === 'bn' ? 'পূর্ণ বেতন' : 'Full') : monthPaymentDetail.type === 'partial' ? (lang === 'bn' ? 'আংশিক পরিশোধ' : 'Partial') : (lang === 'bn' ? 'অগ্রিম প্রদান' : 'Advance')}</span></div>
                                     <div>{lang === 'bn' ? 'পরিশোধিত অর্থ:' : 'Paid Amount:'} <span className="font-bold text-emerald-600">৳{monthPaymentDetail.paidAmount.toLocaleString()}</span></div>
                                     <div>{lang === 'bn' ? 'পরিশোধের মাধ্যম:' : 'Payment Method:'} <span className="font-bold text-slate-800">{monthPaymentDetail.paymentMethod === 'Cash' ? (lang === 'bn' ? 'ক্যাশ' : 'Cash') : monthPaymentDetail.paymentMethod === 'Bank' ? (lang === 'bn' ? 'ব্যাংক' : 'Bank') : (lang === 'bn' ? 'বিকাশ/নগদ' : 'MFS')}</span></div>
@@ -7320,7 +7503,7 @@ export default function Dashboard() {
                                 </div>
                               )}
 
-                              <div className="pt-3 border-t border-slate-100/60 flex justify-end items-center gap-4">
+                              <div className="pt-2 border-t border-slate-200/70 flex justify-end items-center gap-4">
                                 <div className="flex items-center gap-3 shrink-0">
                                   <button
                                     onClick={() => {
@@ -7377,6 +7560,7 @@ export default function Dashboard() {
             )}
 
           </div>
+        </div>
 
         {/* Notice Detailed Modal popup */}
         {selectedNoticeDetails && (
@@ -8359,7 +8543,6 @@ export default function Dashboard() {
         />
 
       </div>
-    </div>
   );
 }
 
