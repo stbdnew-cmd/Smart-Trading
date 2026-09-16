@@ -182,6 +182,10 @@ export interface SalaryCalculationResult {
   advanceSalary: number;
   netPayable: number;
   paidDays: number;
+  salaryType: 'hourly' | 'monthly';
+  hourlyRate: number;
+  totalWorkedHours: number;
+  grossHourlyPay: number;
 }
 
 const calculateMonthlySalary = (
@@ -242,32 +246,52 @@ const calculateMonthlySalary = (
   // Friday worked bonus
   const fridayBonus = fridayWorkedCount * dailyRate;
   
-  // Overtime calculations: daily work beyond 8 hours
+  // Work hours & Overtime calculations
   let totalOtMinutes = 0;
+  let totalWorkedMinutes = 0;
   monthLogs.forEach(log => {
-    if (log.checkIn && log.checkOut) {
+    if (log.checkIn) {
       const inM = parseTimeStrToMinutes(log.checkIn);
-      const outM = parseTimeStrToMinutes(log.checkOut);
-      if (outM > inM) {
-        const workedM = outM - inM;
-        if (workedM > 480) { // 8 hours = 480 mins
-          totalOtMinutes += (workedM - 480);
+      if (log.checkOut) {
+        const outM = parseTimeStrToMinutes(log.checkOut);
+        if (outM > inM) {
+          const workedM = outM - inM;
+          totalWorkedMinutes += workedM;
+          if (workedM > 480) { // 8 hours = 480 mins
+            totalOtMinutes += (workedM - 480);
+          }
         }
+      } else {
+        // Checked in without checkout yet: standard 8h (480 mins)
+        totalWorkedMinutes += 480;
       }
     }
   });
   
   const otHours = Math.round((totalOtMinutes / 60) * 10) / 10;
-  const hourlyRate = dailyRate / 8;
-  const otPay = Math.round(otHours * hourlyRate);
+  const totalWorkedHours = Math.round((totalWorkedMinutes / 60) * 10) / 10;
+  
+  const salaryType: 'hourly' | 'monthly' = emp.salaryType || 'hourly';
+  const hourlyRate = emp.hourlyRate || Math.round(emp.baseSalary / (totalCalendarDays * 8)) || 150;
+  const otHourlyRate = salaryType === 'hourly' ? hourlyRate : (dailyRate / 8);
+  const otPay = Math.round(otHours * otHourlyRate);
+  const grossHourlyPay = Math.round(totalWorkedHours * hourlyRate);
   
   const deductions = emp.deductions || 0;
   const advanceSalary = emp.advanceSalary || 0;
   
-  const netPayable = Math.max(
-    0,
-    emp.baseSalary - absentDeduction - lateDeduction + fridayBonus + otPay - deductions - advanceSalary
-  );
+  let netPayable = 0;
+  if (salaryType === 'hourly') {
+    netPayable = Math.max(
+      0,
+      grossHourlyPay + fridayBonus - deductions - advanceSalary
+    );
+  } else {
+    netPayable = Math.max(
+      0,
+      emp.baseSalary - absentDeduction - lateDeduction + fridayBonus + otPay - deductions - advanceSalary
+    );
+  }
   
   const paidDays = Math.max(0, limitDay - absentDaysCount);
   
@@ -287,7 +311,11 @@ const calculateMonthlySalary = (
     deductions,
     advanceSalary,
     netPayable,
-    paidDays
+    paidDays,
+    salaryType,
+    hourlyRate,
+    totalWorkedHours,
+    grossHourlyPay
   };
 };
 
@@ -370,6 +398,8 @@ export default function Dashboard() {
   const [editEmail, setEditEmail] = useState('');
   const [editEmailPrefix, setEditEmailPrefix] = useState('');
   const [editSalary, setEditSalary] = useState('30000');
+  const [editSalaryType, setEditSalaryType] = useState<'hourly' | 'monthly'>('hourly');
+  const [editHourlyRate, setEditHourlyRate] = useState('150');
   const [editAllowances, setEditAllowances] = useState('0');
   const [editDeductions, setEditDeductions] = useState('0');
   const [editAdvanceSalary, setEditAdvanceSalary] = useState('0');
@@ -406,7 +436,9 @@ export default function Dashboard() {
   const [newEmailPrefix, setNewEmailPrefix] = useState('');
   const [newDesignation, setNewDesignation] = useState('Sales Executive');
   const [newDesignationBn, setNewDesignationBn] = useState('সেলস এক্সিকিউটিভ');
-  const [newSalary, setNewSalary] = useState('30000');
+  const [newSalaryType, setNewSalaryType] = useState<'hourly' | 'monthly'>('hourly');
+  const [newHourlyRate, setNewHourlyRate] = useState('150');
+  const [newSalary, setNewSalary] = useState('31200');
   const [newJoiningDate, setNewJoiningDate] = useState(new Date().toISOString().split('T')[0]);
   const [newShiftStartTime, setNewShiftStartTime] = useState('09:00');
   const [newAllowances, setNewAllowances] = useState('0');
@@ -642,7 +674,9 @@ export default function Dashboard() {
         setEditDesignationBn(emp.designationBn || emp.designation);
         setEditEmail(emp.email);
         setEditEmailPrefix(emp.email.replace(/@smarttrading\.com$/i, ''));
-        setEditSalary(String(emp.baseSalary));
+        setEditSalary(String(emp.baseSalary || 30000));
+        setEditSalaryType(emp.salaryType || 'hourly');
+        setEditHourlyRate(String(emp.hourlyRate || Math.round((emp.baseSalary || 30000) / (26 * 8)) || 150));
         setEditAllowances(String(emp.allowances || 0));
         setEditDeductions(String(emp.deductions || 0));
         setEditAdvanceSalary(String(emp.advanceSalary || 0));
@@ -1723,7 +1757,10 @@ export default function Dashboard() {
     const cleanEmail = cleanPrefix ? `${cleanPrefix}@smarttrading.com` : '';
     const cleanName = newName.trim();
     const cleanNameBn = newNameBn.trim() || cleanName;
-    const salaryVal = Math.max(0, parseInt(newSalary) || 30000);
+    const hourlyRateVal = Math.max(0, parseInt(newHourlyRate) || 150);
+    const salaryVal = newSalaryType === 'hourly'
+      ? Math.max(0, hourlyRateVal * 8 * 26)
+      : Math.max(0, parseInt(newSalary) || 30000);
     const joiningDateVal = newJoiningDate || new Date().toISOString().split('T')[0];
     const shiftTimeVal = newShiftStartTime || '09:00';
     const finalDesignation = newDesignation.trim() || 'Executive';
@@ -1755,6 +1792,8 @@ export default function Dashboard() {
       designation: finalDesignation,
       designationBn: finalDesignationBn,
       baseSalary: salaryVal,
+      salaryType: newSalaryType,
+      hourlyRate: hourlyRateVal,
       joiningDate: joiningDateVal,
       shiftStartTime: shiftTimeVal,
       allowances: Math.max(0, parseInt(newAllowances) || 0),
@@ -1769,7 +1808,9 @@ export default function Dashboard() {
           newSalary: salaryVal,
           incrementAmount: salaryVal,
           date: joiningDateVal,
-          note: lang === 'bn' ? 'যোগদানকালীন প্রারম্ভিক মূল বেতন' : 'Initial Starting Base Salary',
+          note: newSalaryType === 'hourly'
+            ? (lang === 'bn' ? `প্রারম্ভিক ঘণ্টাভিত্তিক রেট: ৳${hourlyRateVal}/ঘণ্টা` : `Initial Hourly Rate: ৳${hourlyRateVal}/hr`)
+            : (lang === 'bn' ? 'যোগদানকালীন প্রারম্ভিক মূল বেতন' : 'Initial Starting Base Salary'),
           updatedAt: new Date().toLocaleString()
         }
       ]
@@ -1787,7 +1828,9 @@ export default function Dashboard() {
     setNewEmailPrefix('');
     setNewDesignation('Sales Executive');
     setNewDesignationBn('সেলস এক্সিকিউটিভ');
-    setNewSalary('30000');
+    setNewSalaryType('hourly');
+    setNewHourlyRate('150');
+    setNewSalary('31200');
     setNewJoiningDate(new Date().toISOString().split('T')[0]);
     setNewShiftStartTime('09:00');
     setNewAllowances('0');
@@ -1834,12 +1877,15 @@ export default function Dashboard() {
     const cleanPrefix = editEmailPrefix.trim().replace(/@.*$/, '');
     const fullEmail = cleanPrefix ? `${cleanPrefix}@smarttrading.com` : editEmail;
 
-    const newSalaryVal = parseInt(editSalary) || 0;
+    const hourlyRateVal = Math.max(0, parseInt(editHourlyRate) || 150);
+    const newSalaryVal = editSalaryType === 'hourly'
+      ? Math.max(0, hourlyRateVal * 8 * 26)
+      : (parseInt(editSalary) || 0);
 
     const updated = employeesList.map(emp => {
       if (emp.id === activeEmpProfileId) {
         let history = emp.salaryHistory ? [...emp.salaryHistory] : [];
-        if (emp.baseSalary !== newSalaryVal) {
+        if (emp.baseSalary !== newSalaryVal || emp.salaryType !== editSalaryType || emp.hourlyRate !== hourlyRateVal) {
           const diff = newSalaryVal - emp.baseSalary;
           const newRecord: SalaryHistoryRecord = {
             id: 'sh-' + Date.now(),
@@ -1847,7 +1893,11 @@ export default function Dashboard() {
             newSalary: newSalaryVal,
             incrementAmount: diff,
             date: new Date().toISOString().split('T')[0],
-            note: editSalaryNote.trim() || (diff > 0 ? (lang === 'bn' ? 'বেতন বৃদ্ধি (ইনক্রিমেন্ট)' : 'Salary Increment') : (lang === 'bn' ? 'বেতন সমন্বয়' : 'Salary Adjustment')),
+            note: editSalaryNote.trim() || (
+              editSalaryType === 'hourly' 
+                ? (lang === 'bn' ? `ঘণ্টাভিত্তিক রেট: ৳${hourlyRateVal}/ঘণ্টা নির্ধারণ` : `Hourly rate set to ৳${hourlyRateVal}/hr`)
+                : (diff > 0 ? (lang === 'bn' ? 'বেতন বৃদ্ধি (ইনক্রিমেন্ট)' : 'Salary Increment') : (lang === 'bn' ? 'বেতন সমন্বয়' : 'Salary Adjustment'))
+            ),
             updatedAt: new Date().toLocaleString()
           };
           history = [newRecord, ...history];
@@ -1861,6 +1911,8 @@ export default function Dashboard() {
           designationBn: editDesignationBn.trim() || editDesignation.trim() || emp.designationBn,
           email: fullEmail,
           baseSalary: newSalaryVal,
+          salaryType: editSalaryType,
+          hourlyRate: hourlyRateVal,
           deductions: emp.deductions || 0,
           advanceSalary: emp.advanceSalary || 0,
           joiningDate: editJoiningDate,
@@ -4284,22 +4336,42 @@ export default function Dashboard() {
 
                           {/* Salary Key Figures Grid */}
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
-                            {/* Basic Salary */}
+                            {/* Basic / Hourly Rate */}
                             <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                              <span className="text-[9.5px] text-slate-400 font-bold block mb-0.5">{lang === 'bn' ? 'চুক্তির মূল বেতন:' : 'Basic Salary:'}</span>
+                              <span className="text-[9.5px] text-slate-400 font-bold block mb-0.5">
+                                {salaryCalc.salaryType === 'hourly' 
+                                  ? (lang === 'bn' ? 'ঘণ্টাপ্রতি রেট:' : 'Hourly Rate:') 
+                                  : (lang === 'bn' ? 'চুক্তির মূল বেতন:' : 'Basic Salary:')}
+                              </span>
                               <div className="font-black text-slate-800 text-base font-sans">
-                                ৳{salaryCalc.baseSalary.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}
+                                {salaryCalc.salaryType === 'hourly' 
+                                  ? `৳${salaryCalc.hourlyRate.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}/h` 
+                                  : `৳${salaryCalc.baseSalary.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}`}
                               </div>
-                              <span className="text-[8.5px] text-slate-400 font-medium">{lang === 'bn' ? 'স্থায়ী চুক্তি' : 'Contract'}</span>
+                              <span className="text-[8.5px] text-brand-green font-medium">
+                                {salaryCalc.salaryType === 'hourly' 
+                                  ? (lang === 'bn' ? `${toBnDigits(salaryCalc.totalWorkedHours)} ঘণ্টা ডিউটি` : `${salaryCalc.totalWorkedHours}h worked`) 
+                                  : (lang === 'bn' ? 'স্থায়ী চুক্তি' : 'Contract')}
+                              </span>
                             </div>
 
-                            {/* Overtime & Bonus */}
+                            {/* Overtime & Bonus / Gross Hourly Pay */}
                             <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                              <span className="text-[9.5px] text-slate-400 font-bold block mb-0.5">{lang === 'bn' ? 'ওভারটাইম ও বোনাস:' : 'OT & Bonus:'}</span>
+                              <span className="text-[9.5px] text-slate-400 font-bold block mb-0.5">
+                                {salaryCalc.salaryType === 'hourly' 
+                                  ? (lang === 'bn' ? 'মোট অর্জিত আয়:' : 'Gross Earned:') 
+                                  : (lang === 'bn' ? 'ওভারটাইম ও বোনাস:' : 'OT & Bonus:')}
+                              </span>
                               <div className="font-black text-emerald-600 text-base font-sans">
-                                + ৳{(salaryCalc.otPay + salaryCalc.fridayBonus).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}
+                                {salaryCalc.salaryType === 'hourly' 
+                                  ? `৳${salaryCalc.grossHourlyPay.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}` 
+                                  : `+ ৳${(salaryCalc.otPay + salaryCalc.fridayBonus).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}`}
                               </div>
-                              <span className="text-[8.5px] text-emerald-600 font-medium">+{toBnDigits(salaryCalc.otHours)}h {lang === 'bn' ? 'ওভারটাইম' : 'OT'}</span>
+                              <span className="text-[8.5px] text-emerald-600 font-medium">
+                                {salaryCalc.salaryType === 'hourly' 
+                                  ? (salaryCalc.fridayBonus > 0 ? `+৳${salaryCalc.fridayBonus} শুক্রবার বোনাস` : (lang === 'bn' ? 'হাজিরা অনুযায়ী হিসাব' : 'Calculated by hours')) 
+                                  : `+${toBnDigits(salaryCalc.otHours)}h ${lang === 'bn' ? 'ওভারটাইম' : 'OT'}`}
+                              </span>
                             </div>
 
                             {/* Advance Taken */}
@@ -4849,15 +4921,27 @@ export default function Dashboard() {
                         {/* Salary Summary Highlight */}
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                           <div className="p-4 bg-slate-50 border border-slate-200/60 rounded-2xl text-center space-y-1">
-                            <span className="text-[10px] text-slate-400 font-bold uppercase">{lang === 'bn' ? 'মূল বেতন (Basic)' : 'Basic Salary'}</span>
-                            <div className="text-xl font-black text-slate-800 font-sans">৳{calc.baseSalary.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</div>
-                            <span className="text-[9px] text-slate-400">{lang === 'bn' ? `দৈনিক: ৳${Math.round(calc.dailyRate)}` : `Daily: ৳${Math.round(calc.dailyRate)}`}</span>
+                            <span className="text-[10px] text-slate-400 font-bold uppercase">
+                              {calc.salaryType === 'hourly' ? (lang === 'bn' ? 'ঘণ্টাপ্রতি রেট' : 'Hourly Rate') : (lang === 'bn' ? 'মূল বেতন (Basic)' : 'Basic Salary')}
+                            </span>
+                            <div className="text-xl font-black text-slate-800 font-sans">
+                              {calc.salaryType === 'hourly' ? `৳${calc.hourlyRate}/h` : `৳${calc.baseSalary.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}`}
+                            </div>
+                            <span className="text-[9px] text-slate-400">
+                              {calc.salaryType === 'hourly' ? (lang === 'bn' ? 'ঘণ্টাভিত্তিক চুক্তি' : 'Hourly rate') : (lang === 'bn' ? `দৈনিক: ৳${Math.round(calc.dailyRate)}` : `Daily: ৳${Math.round(calc.dailyRate)}`)}
+                            </span>
                           </div>
 
                           <div className="p-4 bg-slate-50 border border-slate-200/60 rounded-2xl text-center space-y-1">
-                            <span className="text-[10px] text-slate-400 font-bold uppercase">{lang === 'bn' ? 'পেইড কার্যদিবস' : 'Paid Days'}</span>
-                            <div className="text-xl font-black text-slate-800 font-sans">{calc.paidDays} / {calc.totalCalendarDays} {lang === 'bn' ? 'দিন' : 'days'}</div>
-                            <span className="text-[9px] text-slate-400">{lang === 'bn' ? 'উপস্থিতি ও ছুটিসহ' : 'Worked + Off'}</span>
+                            <span className="text-[10px] text-slate-400 font-bold uppercase">
+                              {calc.salaryType === 'hourly' ? (lang === 'bn' ? 'মোট ডিউটি ঘণ্টা' : 'Total Worked') : (lang === 'bn' ? 'পেইড কার্যদিবস' : 'Paid Days')}
+                            </span>
+                            <div className="text-xl font-black text-brand-green font-sans">
+                              {calc.salaryType === 'hourly' ? `${toBnDigits(calc.totalWorkedHours)} h` : `${calc.paidDays} / ${calc.totalCalendarDays} ${lang === 'bn' ? 'দিন' : 'days'}`}
+                            </div>
+                            <span className="text-[9px] text-slate-400">
+                              {calc.salaryType === 'hourly' ? (lang === 'bn' ? `${calc.paidDays} দিন উপস্থিতি` : `${calc.paidDays} days present`) : (lang === 'bn' ? 'উপস্থিতি ও ছুটিসহ' : 'Worked + Off')}
+                            </span>
                           </div>
 
                           <div className="p-4 bg-rose-50/60 border border-rose-100 rounded-2xl text-center space-y-1">
@@ -4880,40 +4964,65 @@ export default function Dashboard() {
                           </div>
                           <table className="w-full text-xs text-left">
                             <tbody className="divide-y divide-slate-100">
-                              <tr className="bg-white">
-                                <td className="p-3 text-slate-600 font-medium">{lang === 'bn' ? 'মূল মাসিক বেতন (Basic Pay)' : 'Basic Monthly Salary'}</td>
-                                <td className="p-3 text-right font-bold text-slate-800 font-mono">৳{calc.baseSalary.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</td>
-                              </tr>
-                              {allowances > 0 && (
-                                <tr className="bg-slate-50/50">
-                                  <td className="p-3 text-slate-600 font-medium">{lang === 'bn' ? 'মাসিক নিয়মিত ভাতা (Allowances)' : 'Monthly Allowances'}</td>
-                                  <td className="p-3 text-right font-bold text-emerald-600 font-mono">+ ৳{allowances.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</td>
-                                </tr>
+                              {calc.salaryType === 'hourly' ? (
+                                <>
+                                  <tr className="bg-white">
+                                    <td className="p-3 text-slate-600 font-medium">{lang === 'bn' ? 'ঘণ্টাপ্রতি নির্ধারিত রেট (Hourly Rate)' : 'Hourly Rate'}</td>
+                                    <td className="p-3 text-right font-bold text-slate-800 font-mono">৳{calc.hourlyRate} / {lang === 'bn' ? 'ঘণ্টা' : 'hour'}</td>
+                                  </tr>
+                                  <tr className="bg-slate-50/50">
+                                    <td className="p-3 text-slate-600 font-medium">{lang === 'bn' ? 'মাসে মোট কাজ করা সময় (ডিউটি)' : 'Total Duty Hours'}</td>
+                                    <td className="p-3 text-right font-bold text-brand-green font-mono">{toBnDigits(calc.totalWorkedHours)} {lang === 'bn' ? 'ঘণ্টা' : 'hours'}</td>
+                                  </tr>
+                                  <tr className="bg-white">
+                                    <td className="p-3 text-slate-600 font-medium">{lang === 'bn' ? 'ঘণ্টাভিত্তিক মোট উপার্জন (Gross Hourly Pay)' : 'Gross Hourly Earnings'}</td>
+                                    <td className="p-3 text-right font-bold text-emerald-600 font-mono">৳{calc.grossHourlyPay.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</td>
+                                  </tr>
+                                  {calc.fridayBonus > 0 && (
+                                    <tr className="bg-slate-50/50">
+                                      <td className="p-3 text-slate-600 font-medium">{lang === 'bn' ? 'শুক্রবারের বিশেষ বোনাস' : 'Friday Work Bonus'}</td>
+                                      <td className="p-3 text-right font-bold text-emerald-600 font-mono">+ ৳{calc.fridayBonus.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</td>
+                                    </tr>
+                                  )}
+                                </>
+                              ) : (
+                                <>
+                                  <tr className="bg-white">
+                                    <td className="p-3 text-slate-600 font-medium">{lang === 'bn' ? 'মূল মাসিক বেতন (Basic Pay)' : 'Basic Monthly Salary'}</td>
+                                    <td className="p-3 text-right font-bold text-slate-800 font-mono">৳{calc.baseSalary.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</td>
+                                  </tr>
+                                  {allowances > 0 && (
+                                    <tr className="bg-slate-50/50">
+                                      <td className="p-3 text-slate-600 font-medium">{lang === 'bn' ? 'মাসিক নিয়মিত ভাতা (Allowances)' : 'Monthly Allowances'}</td>
+                                      <td className="p-3 text-right font-bold text-emerald-600 font-mono">+ ৳{allowances.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</td>
+                                    </tr>
+                                  )}
+                                  <tr className="bg-white">
+                                    <td className="p-3 text-slate-600 font-medium">{lang === 'bn' ? 'অনুপস্থিতি কর্তন' : 'Absent Deduction'}</td>
+                                    <td className="p-3 text-right font-bold text-rose-600 font-mono">
+                                      {calc.absentDaysCount > 0 ? `- ৳${Math.round(calc.absentDeduction).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')} (${calc.absentDaysCount} দিন)` : '৳০ (নেই)'}
+                                    </td>
+                                  </tr>
+                                  <tr className="bg-slate-50/50">
+                                    <td className="p-3 text-slate-600 font-medium">{lang === 'bn' ? 'বিলম্ব হাজিরা কর্তন (প্রতি ৩ দিনে ১ দিনের বেতন কাটা)' : 'Late Deductions (3 lates = 1 day cut)'}</td>
+                                    <td className="p-3 text-right font-bold text-amber-600 font-mono">
+                                      {calc.lateCutDays > 0 ? `- ৳${Math.round(calc.lateDeduction).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')} (${calc.lateCount} দিন লেট)` : '৳০ (কর্তন নেই)'}
+                                    </td>
+                                  </tr>
+                                  <tr className="bg-white">
+                                    <td className="p-3 text-slate-600 font-medium">{lang === 'bn' ? 'শুক্রবারের বিশেষ হাজিরা বোনাস' : 'Friday Worked Bonus'}</td>
+                                    <td className="p-3 text-right font-bold text-emerald-600 font-mono">
+                                      {calc.fridayBonus > 0 ? `+ ৳${Math.round(calc.fridayBonus).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')} (${calc.fridayWorkedCount} শুক্রবার)` : '৳০'}
+                                    </td>
+                                  </tr>
+                                  <tr className="bg-slate-50/50">
+                                    <td className="p-3 text-slate-600 font-medium">{lang === 'bn' ? 'ওভারটাইম আয় (OT - দৈনিক ৮ ঘণ্টার অতিরিক্ত)' : 'Overtime Pay (Beyond 8h/day)'}</td>
+                                    <td className="p-3 text-right font-bold text-emerald-600 font-mono">
+                                      {calc.otPay > 0 ? `+ ৳${Math.round(calc.otPay).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')} (${calc.otHours} ঘণ্টা)` : '৳০'}
+                                    </td>
+                                  </tr>
+                                </>
                               )}
-                              <tr className="bg-white">
-                                <td className="p-3 text-slate-600 font-medium">{lang === 'bn' ? 'অনুপস্থিতি কর্তন' : 'Absent Deduction'}</td>
-                                <td className="p-3 text-right font-bold text-rose-600 font-mono">
-                                  {calc.absentDaysCount > 0 ? `- ৳${Math.round(calc.absentDeduction).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')} (${calc.absentDaysCount} দিন)` : '৳০ (নেই)'}
-                                </td>
-                              </tr>
-                              <tr className="bg-slate-50/50">
-                                <td className="p-3 text-slate-600 font-medium">{lang === 'bn' ? 'বিলম্ব হাজিরা কর্তন (প্রতি ৩ দিনে ১ দিনের বেতন কাটা)' : 'Late Deductions (3 lates = 1 day cut)'}</td>
-                                <td className="p-3 text-right font-bold text-amber-600 font-mono">
-                                  {calc.lateCutDays > 0 ? `- ৳${Math.round(calc.lateDeduction).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')} (${calc.lateCount} দিন লেট)` : '৳০ (কর্তন নেই)'}
-                                </td>
-                              </tr>
-                              <tr className="bg-white">
-                                <td className="p-3 text-slate-600 font-medium">{lang === 'bn' ? 'শুক্রবারের বিশেষ হাজিরা বোনাস' : 'Friday Worked Bonus'}</td>
-                                <td className="p-3 text-right font-bold text-emerald-600 font-mono">
-                                  {calc.fridayBonus > 0 ? `+ ৳${Math.round(calc.fridayBonus).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')} (${calc.fridayWorkedCount} শুক্রবার)` : '৳০'}
-                                </td>
-                              </tr>
-                              <tr className="bg-slate-50/50">
-                                <td className="p-3 text-slate-600 font-medium">{lang === 'bn' ? 'ওভারটাইম আয় (OT - দৈনিক ৮ ঘণ্টার অতিরিক্ত)' : 'Overtime Pay (Beyond 8h/day)'}</td>
-                                <td className="p-3 text-right font-bold text-emerald-600 font-mono">
-                                  {calc.otPay > 0 ? `+ ৳${Math.round(calc.otPay).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')} (${calc.otHours} ঘণ্টা)` : '৳০'}
-                                </td>
-                              </tr>
                               {advanceTaken > 0 && (
                                 <tr className="bg-rose-50/20">
                                   <td className="p-3 text-rose-800 font-medium">{lang === 'bn' ? 'পূর্বে গৃহিত অগ্রিম বেতন কর্তন (Advance Cut)' : 'Advance Salary Deducted'}</td>
@@ -6288,12 +6397,12 @@ export default function Dashboard() {
                             </span>
                           </div>
 
-                          <div className="md:col-span-2 pt-2 border-t border-slate-100 mt-1">
-                            <div className="flex justify-between items-center mb-2">
-                              <span className="block text-[10px] font-extrabold text-slate-450 uppercase tracking-wide">
-                                {lang === 'bn' ? 'বেতন ও কাঠামো এডিট (Salary Configuration)' : 'Salary Configuration'}
+                          <div className="md:col-span-2 pt-2 border-t border-slate-100 mt-1 space-y-3">
+                            <div className="flex justify-between items-center">
+                              <span className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wide">
+                                {lang === 'bn' ? 'বেতন কাঠামো এডিট (Salary Configuration)' : 'Salary Configuration'}
                               </span>
-                              {emp.baseSalary !== parseInt(editSalary) && !isNaN(parseInt(editSalary)) && (
+                              {editSalaryType === 'monthly' && emp.baseSalary !== parseInt(editSalary) && !isNaN(parseInt(editSalary)) && (
                                 <span className={`text-[9.5px] font-bold px-2 py-0.5 rounded-lg flex items-center gap-1 ${
                                   parseInt(editSalary) > emp.baseSalary 
                                     ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
@@ -6305,42 +6414,106 @@ export default function Dashboard() {
                                 </span>
                               )}
                             </div>
-                            
-                            <div className="space-y-1">
-                              <label className="block text-[9.5px] font-bold text-slate-500 mb-1">{lang === 'bn' ? 'মাসিক মূল বেতন (Monthly Basic Salary ৳)' : 'Monthly Basic Salary (৳)'}</label>
-                              <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-xs">৳</span>
-                                <input 
-                                  type="number" 
-                                  value={editSalary} 
-                                  onChange={(e) => setEditSalary(e.target.value)} 
-                                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-7 pr-3 py-2 text-xs focus:border-brand-green outline-none font-bold text-slate-800 font-sans" 
-                                  placeholder="30000"
-                                  required 
-                                />
+
+                            {/* Salary Type Segmented Toggle */}
+                            <div>
+                              <label className="block text-[9.5px] font-bold text-slate-500 mb-1">
+                                {lang === 'bn' ? 'বেতনের ধরণ নির্বাচন করুন:' : 'Select Salary Option:'}
+                              </label>
+                              <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
+                                <button
+                                  type="button"
+                                  onClick={() => setEditSalaryType('hourly')}
+                                  className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all border-0 cursor-pointer flex items-center justify-center gap-1.5 ${
+                                    editSalaryType === 'hourly' 
+                                      ? 'bg-brand-green text-white shadow-xs' 
+                                      : 'bg-transparent text-slate-600 hover:text-slate-900'
+                                  }`}
+                                >
+                                  <Clock size={13} />
+                                  <span>{lang === 'bn' ? 'ঘণ্টাভিত্তিক (Hourly)' : 'Hourly Rate'}</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditSalaryType('monthly')}
+                                  className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all border-0 cursor-pointer flex items-center justify-center gap-1.5 ${
+                                    editSalaryType === 'monthly' 
+                                      ? 'bg-brand-green text-white shadow-xs' 
+                                      : 'bg-transparent text-slate-600 hover:text-slate-900'
+                                  }`}
+                                >
+                                  <Calendar size={13} />
+                                  <span>{lang === 'bn' ? 'মাসিক (Monthly)' : 'Monthly Base'}</span>
+                                </button>
                               </div>
-                              <span className="text-[9px] text-slate-400 font-medium block">
-                                {lang === 'bn' ? 'কর্মকর্তার নির্ধারিত মাসিক মূল বেতন। অগ্রিম ও কর্তন প্রতি মাসের বেতন প্রক্রিয়াকরণে স্বয়ংক্রিয়ভাবে হিসাব হয়।' : 'Employee fixed monthly base salary. Advance and deductions are calculated during monthly payroll.'}
-                              </span>
                             </div>
 
-                            {/* Optional Increment Note Input when Salary is changed */}
-                            {emp.baseSalary !== parseInt(editSalary) && !isNaN(parseInt(editSalary)) && (
+                            {editSalaryType === 'hourly' ? (
+                              <div className="space-y-1">
+                                <label className="block text-[9.5px] font-bold text-slate-500 mb-1">
+                                  {lang === 'bn' ? 'ঘণ্টাপ্রতি রেট (Hourly Rate ৳)' : 'Hourly Rate (৳ / hour)'}
+                                </label>
+                                <div className="relative">
+                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-xs">৳</span>
+                                  <input 
+                                    type="number" 
+                                    value={editHourlyRate} 
+                                    onChange={(e) => {
+                                      const rate = e.target.value;
+                                      setEditHourlyRate(rate);
+                                      setEditSalary(String((parseInt(rate) || 0) * 8 * 26));
+                                    }} 
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-7 pr-3 py-2 text-xs focus:border-brand-green outline-none font-bold text-slate-800 font-sans" 
+                                    placeholder="150"
+                                    required 
+                                  />
+                                </div>
+                                <span className="text-[9px] text-emerald-600 font-bold block">
+                                  {lang === 'bn' 
+                                    ? `স্টাফের কাজের ঘণ্টার ভিত্তিতে সরাসরি বেতন গণনা হবে (আনুমানিক ২৬ দিন × ৮ ঘণ্টা = ~৳${((parseInt(editHourlyRate) || 0) * 8 * 26).toLocaleString()})` 
+                                    : `Salary calculated directly from logged duty hours (Est. 26d × 8h = ~৳${((parseInt(editHourlyRate) || 0) * 8 * 26).toLocaleString()})`}
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="space-y-1">
+                                <label className="block text-[9.5px] font-bold text-slate-500 mb-1">
+                                  {lang === 'bn' ? 'মাসিক মূল বেতন (Monthly Basic Salary ৳)' : 'Monthly Basic Salary (৳)'}
+                                </label>
+                                <div className="relative">
+                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-xs">৳</span>
+                                  <input 
+                                    type="number" 
+                                    value={editSalary} 
+                                    onChange={(e) => {
+                                      const sal = e.target.value;
+                                      setEditSalary(sal);
+                                      setEditHourlyRate(String(Math.round((parseInt(sal) || 0) / (26 * 8))));
+                                    }} 
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-7 pr-3 py-2 text-xs focus:border-brand-green outline-none font-bold text-slate-800 font-sans" 
+                                    placeholder="30000"
+                                    required 
+                                  />
+                                </div>
+                                <span className="text-[9px] text-slate-400 font-medium block">
+                                  {lang === 'bn' 
+                                    ? `কর্মকর্তার নির্ধারিত মাসিক মূল বেতন। প্রতি ঘণ্টার সমানুপাতিক রেট: ~৳${Math.round((parseInt(editSalary) || 0) / (26 * 8))}/ঘণ্টা` 
+                                    : `Fixed monthly base salary. Equivalent hourly rate: ~৳${Math.round((parseInt(editSalary) || 0) / (26 * 8))}/hr`}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* Optional Increment Note Input */}
+                            {(emp.baseSalary !== parseInt(editSalary) || emp.salaryType !== editSalaryType || emp.hourlyRate !== parseInt(editHourlyRate)) && (
                               <div className="mt-3 p-3 bg-amber-50/70 border border-amber-200/70 rounded-2xl space-y-1">
                                 <div className="flex items-center justify-between text-[10px] text-amber-800 font-bold flex-wrap gap-1">
                                   <span className="flex items-center gap-1">
                                     <FileText size={11} className="text-amber-700 shrink-0" />
-                                    <span>{lang === 'bn' ? 'বেতন পরিবর্তনের কারণ / মন্তব্য (ঐচ্ছিক):' : 'Reason for Salary Change (Optional):'}</span>
-                                  </span>
-                                  <span className="text-amber-600 font-mono flex items-center gap-1">
-                                    <span>{lang === 'bn' ? 'পূর্বের বেতন: ' : 'Prev: '}৳{emp.baseSalary.toLocaleString()}</span>
-                                    <ArrowRight size={10} className="shrink-0" />
-                                    <span>{lang === 'bn' ? 'নতুন: ' : 'New: '}৳{(parseInt(editSalary)||0).toLocaleString()}</span>
+                                    <span>{lang === 'bn' ? 'বেতন পরিবর্তনের মন্তব্য (ঐচ্ছিক):' : 'Reason for Salary Change (Optional):'}</span>
                                   </span>
                                 </div>
                                 <input
                                   type="text"
-                                  placeholder={lang === 'bn' ? 'যেমন: বার্ষিক ইনক্রিমেন্ট, পারফরম্যান্স বোনাস, পদোন্নতি ইত্যাদি' : 'e.g. Annual increment, promotion, etc.'}
+                                  placeholder={lang === 'bn' ? 'যেমন: ঘণ্টাভিত্তিক রেট চালু, বার্ষিক ইনক্রিমেন্ট ইত্যাদি' : 'e.g. Switched to hourly, annual increment, etc.'}
                                   value={editSalaryNote}
                                   onChange={(e) => setEditSalaryNote(e.target.value)}
                                   className="w-full bg-white border border-amber-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 outline-none focus:border-brand-green font-medium"
@@ -6401,24 +6574,49 @@ export default function Dashboard() {
 
                         <div className="space-y-4 text-xs flex-1">
                           <div className="grid grid-cols-2 gap-3.5">
-                            <div className="bg-slate-50/70 border border-slate-100 p-3 rounded-2xl">
-                              <span className="text-[9.5px] text-slate-400 block font-bold mb-0.5">{lang === 'bn' ? 'মূল বেতন (Basic):' : 'Basic:'}</span>
-                              <span className="font-extrabold text-slate-800 text-sm font-sans">৳{calc.baseSalary.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</span>
-                            </div>
-                            <div className="bg-slate-50/70 border border-slate-100 p-3 rounded-2xl">
-                              <span className="text-[9.5px] text-slate-400 block font-bold mb-0.5">{lang === 'bn' ? 'অনুপস্থিতি কর্তন:' : 'Absent Deduct:'}</span>
-                              <span className="font-extrabold text-rose-600 text-sm font-sans">
-                                - ৳{calc.absentDeduction.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}
-                              </span>
-                              <span className="text-[8.5px] text-slate-400 font-bold block">({calc.absentDaysCount} {lang === 'bn' ? 'দিন' : 'days'})</span>
-                            </div>
-                            <div className="bg-slate-50/70 border border-slate-100 p-3 rounded-2xl">
-                              <span className="text-[9.5px] text-slate-400 block font-bold mb-0.5">{lang === 'bn' ? '৩ দিন লেট কর্তন:' : 'Late Cut (3:1):'}</span>
-                              <span className="font-extrabold text-rose-600 text-sm font-sans">
-                                - ৳{calc.lateDeduction.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}
-                              </span>
-                              <span className="text-[8.5px] text-slate-400 font-bold block">({calc.lateCount} {lang === 'bn' ? 'লেট =' : 'lates ='} {calc.lateCutDays} {lang === 'bn' ? 'দিন কাটা' : 'day cut'})</span>
-                            </div>
+                            {calc.salaryType === 'hourly' ? (
+                              <>
+                                <div className="bg-slate-50/70 border border-slate-100 p-3 rounded-2xl">
+                                  <span className="text-[9.5px] text-slate-400 block font-bold mb-0.5">{lang === 'bn' ? 'ঘণ্টাভিত্তিক রেট:' : 'Hourly Rate:'}</span>
+                                  <span className="font-extrabold text-slate-800 text-sm font-sans">৳{calc.hourlyRate.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')} / {lang === 'bn' ? 'ঘণ্টা' : 'hr'}</span>
+                                </div>
+                                <div className="bg-slate-50/70 border border-slate-100 p-3 rounded-2xl">
+                                  <span className="text-[9.5px] text-slate-400 block font-bold mb-0.5">{lang === 'bn' ? 'মোট ডিউটি ঘণ্টা:' : 'Worked Hours:'}</span>
+                                  <span className="font-extrabold text-brand-green text-sm font-sans">
+                                    {toBnDigits(calc.totalWorkedHours)} {lang === 'bn' ? 'ঘণ্টা' : 'hrs'}
+                                  </span>
+                                  <span className="text-[8.5px] text-slate-400 font-bold block">({calc.paidDays} {lang === 'bn' ? 'দিন উপস্থিতি' : 'days worked'})</span>
+                                </div>
+                                <div className="bg-slate-50/70 border border-slate-100 p-3 rounded-2xl">
+                                  <span className="text-[9.5px] text-slate-400 block font-bold mb-0.5">{lang === 'bn' ? 'ঘণ্টাভিত্তিক মোট আয়:' : 'Gross Hourly Pay:'}</span>
+                                  <span className="font-extrabold text-emerald-600 text-sm font-sans">
+                                    ৳{calc.grossHourlyPay.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}
+                                  </span>
+                                  <span className="text-[8.5px] text-slate-400 font-bold block">({toBnDigits(calc.totalWorkedHours)}h × ৳{calc.hourlyRate})</span>
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <div className="bg-slate-50/70 border border-slate-100 p-3 rounded-2xl">
+                                  <span className="text-[9.5px] text-slate-400 block font-bold mb-0.5">{lang === 'bn' ? 'মূল বেতন (Basic):' : 'Basic:'}</span>
+                                  <span className="font-extrabold text-slate-800 text-sm font-sans">৳{calc.baseSalary.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</span>
+                                </div>
+                                <div className="bg-slate-50/70 border border-slate-100 p-3 rounded-2xl">
+                                  <span className="text-[9.5px] text-slate-400 block font-bold mb-0.5">{lang === 'bn' ? 'অনুপস্থিতি কর্তন:' : 'Absent Deduct:'}</span>
+                                  <span className="font-extrabold text-rose-600 text-sm font-sans">
+                                    - ৳{calc.absentDeduction.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}
+                                  </span>
+                                  <span className="text-[8.5px] text-slate-400 font-bold block">({calc.absentDaysCount} {lang === 'bn' ? 'দিন' : 'days'})</span>
+                                </div>
+                                <div className="bg-slate-50/70 border border-slate-100 p-3 rounded-2xl">
+                                  <span className="text-[9.5px] text-slate-400 block font-bold mb-0.5">{lang === 'bn' ? '৩ দিন লেট কর্তন:' : 'Late Cut (3:1):'}</span>
+                                  <span className="font-extrabold text-rose-600 text-sm font-sans">
+                                    - ৳{calc.lateDeduction.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}
+                                  </span>
+                                  <span className="text-[8.5px] text-slate-400 font-bold block">({calc.lateCount} {lang === 'bn' ? 'লেট =' : 'lates ='} {calc.lateCutDays} {lang === 'bn' ? 'দিন কাটা' : 'day cut'})</span>
+                                </div>
+                              </>
+                            )}
                             <div className="bg-slate-50/70 border border-slate-100 p-3 rounded-2xl">
                               <span className="text-[9.5px] text-slate-400 block font-bold mb-0.5">{lang === 'bn' ? 'শুক্রবার কাজের বোনাস:' : 'Friday Bonus:'}</span>
                               <span className="font-extrabold text-emerald-600 text-sm font-sans">
@@ -6780,19 +6978,84 @@ export default function Dashboard() {
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
-                        {lang === 'bn' ? 'মাসিক মূল বেতন (৳)' : 'Monthly Base Salary (৳)'}
+                    {/* Salary Option Selection */}
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase">
+                        {lang === 'bn' ? 'বেতনের ধরণ (Salary Option)' : 'Salary Option'}
                       </label>
-                      <input
-                        type="number"
-                        placeholder="30000"
-                        value={newSalary}
-                        onChange={(e) => setNewSalary(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs focus:border-brand-green outline-none font-bold text-slate-800"
-                        required
-                      />
+                      <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
+                        <button
+                          type="button"
+                          onClick={() => setNewSalaryType('hourly')}
+                          className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all border-0 cursor-pointer flex items-center justify-center gap-1 ${
+                            newSalaryType === 'hourly' ? 'bg-brand-green text-white shadow-xs' : 'bg-transparent text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          <Clock size={12} />
+                          <span>{lang === 'bn' ? 'ঘণ্টাভিত্তিক (Hourly)' : 'Hourly'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setNewSalaryType('monthly')}
+                          className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all border-0 cursor-pointer flex items-center justify-center gap-1 ${
+                            newSalaryType === 'monthly' ? 'bg-brand-green text-white shadow-xs' : 'bg-transparent text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          <Calendar size={12} />
+                          <span>{lang === 'bn' ? 'মাসিক (Monthly)' : 'Monthly'}</span>
+                        </button>
+                      </div>
                     </div>
+
+                    {newSalaryType === 'hourly' ? (
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
+                          {lang === 'bn' ? 'ঘণ্টাপ্রতি রেট (৳ / ঘণ্টা)' : 'Hourly Rate (৳ / hour)'}
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-xs">৳</span>
+                          <input
+                            type="number"
+                            placeholder="150"
+                            value={newHourlyRate}
+                            onChange={(e) => {
+                              const rate = e.target.value;
+                              setNewHourlyRate(rate);
+                              setNewSalary(String((parseInt(rate) || 0) * 8 * 26));
+                            }}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3.5 py-2 text-xs focus:border-brand-green outline-none font-bold text-slate-800"
+                            required
+                          />
+                        </div>
+                        <span className="text-[9px] text-emerald-600 font-bold block mt-1">
+                          {lang === 'bn' ? `ডিউটি ঘণ্টার ভিত্তিতে বেতন হিসাব হবে (২৬ দিন × ৮ ঘণ্টা = ~৳${((parseInt(newHourlyRate) || 0) * 8 * 26).toLocaleString()})` : `Calculated by duty hours (26d × 8h = ~৳${((parseInt(newHourlyRate) || 0) * 8 * 26).toLocaleString()})`}
+                        </span>
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
+                          {lang === 'bn' ? 'মাসিক মূল বেতন (৳)' : 'Monthly Base Salary (৳)'}
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-xs">৳</span>
+                          <input
+                            type="number"
+                            placeholder="30000"
+                            value={newSalary}
+                            onChange={(e) => {
+                              const sal = e.target.value;
+                              setNewSalary(sal);
+                              setNewHourlyRate(String(Math.round((parseInt(sal) || 0) / (26 * 8))));
+                            }}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3.5 py-2 text-xs focus:border-brand-green outline-none font-bold text-slate-800"
+                            required
+                          />
+                        </div>
+                        <span className="text-[9px] text-slate-400 font-medium block mt-1">
+                          {lang === 'bn' ? `সমানুপাতিক ঘণ্টার রেট: ~৳${Math.round((parseInt(newSalary) || 0) / (26 * 8))}/ঘণ্টা` : `Equivalent rate: ~৳${Math.round((parseInt(newSalary) || 0) / (26 * 8))}/hr`}
+                        </span>
+                      </div>
+                    )}
 
                     <div>
                       <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
@@ -7001,19 +7264,84 @@ export default function Dashboard() {
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
-                        {lang === 'bn' ? 'মাসিক মূল বেতন (৳)' : 'Monthly Base Salary (৳)'}
+                    {/* Salary Option Selection */}
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase">
+                        {lang === 'bn' ? 'বেতনের ধরণ (Salary Option)' : 'Salary Option'}
                       </label>
-                      <input
-                        type="number"
-                        placeholder="30000"
-                        value={newSalary}
-                        onChange={(e) => setNewSalary(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs focus:border-brand-green outline-none font-bold text-slate-800"
-                        required
-                      />
+                      <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
+                        <button
+                          type="button"
+                          onClick={() => setNewSalaryType('hourly')}
+                          className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all border-0 cursor-pointer flex items-center justify-center gap-1 ${
+                            newSalaryType === 'hourly' ? 'bg-brand-green text-white shadow-xs' : 'bg-transparent text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          <Clock size={12} />
+                          <span>{lang === 'bn' ? 'ঘণ্টাভিত্তিক (Hourly)' : 'Hourly'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setNewSalaryType('monthly')}
+                          className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all border-0 cursor-pointer flex items-center justify-center gap-1 ${
+                            newSalaryType === 'monthly' ? 'bg-brand-green text-white shadow-xs' : 'bg-transparent text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          <Calendar size={12} />
+                          <span>{lang === 'bn' ? 'মাসিক (Monthly)' : 'Monthly'}</span>
+                        </button>
+                      </div>
                     </div>
+
+                    {newSalaryType === 'hourly' ? (
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
+                          {lang === 'bn' ? 'ঘণ্টাপ্রতি রেট (৳ / ঘণ্টা)' : 'Hourly Rate (৳ / hour)'}
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-xs">৳</span>
+                          <input
+                            type="number"
+                            placeholder="150"
+                            value={newHourlyRate}
+                            onChange={(e) => {
+                              const rate = e.target.value;
+                              setNewHourlyRate(rate);
+                              setNewSalary(String((parseInt(rate) || 0) * 8 * 26));
+                            }}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3.5 py-2 text-xs focus:border-brand-green outline-none font-bold text-slate-800"
+                            required
+                          />
+                        </div>
+                        <span className="text-[9px] text-emerald-600 font-bold block mt-1">
+                          {lang === 'bn' ? `ডিউটি ঘণ্টার ভিত্তিতে বেতন হিসাব হবে (২৬ দিন × ৮ ঘণ্টা = ~৳${((parseInt(newHourlyRate) || 0) * 8 * 26).toLocaleString()})` : `Calculated by duty hours (26d × 8h = ~৳${((parseInt(newHourlyRate) || 0) * 8 * 26).toLocaleString()})`}
+                        </span>
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
+                          {lang === 'bn' ? 'মাসিক মূল বেতন (৳)' : 'Monthly Base Salary (৳)'}
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-xs">৳</span>
+                          <input
+                            type="number"
+                            placeholder="30000"
+                            value={newSalary}
+                            onChange={(e) => {
+                              const sal = e.target.value;
+                              setNewSalary(sal);
+                              setNewHourlyRate(String(Math.round((parseInt(sal) || 0) / (26 * 8))));
+                            }}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3.5 py-2 text-xs focus:border-brand-green outline-none font-bold text-slate-800"
+                            required
+                          />
+                        </div>
+                        <span className="text-[9px] text-slate-400 font-medium block mt-1">
+                          {lang === 'bn' ? `সমানুপাতিক ঘণ্টার রেট: ~৳${Math.round((parseInt(newSalary) || 0) / (26 * 8))}/ঘণ্টা` : `Equivalent rate: ~৳${Math.round((parseInt(newSalary) || 0) / (26 * 8))}/hr`}
+                        </span>
+                      </div>
+                    )}
 
                     <div>
                       <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
@@ -7474,6 +7802,10 @@ export default function Dashboard() {
                                 <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-medium mt-0.5">
                                   <span className="font-mono font-bold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200/60">{emp.id}</span>
                                   <span>•</span>
+                                  <span className="text-[9.5px] font-bold text-brand-green bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">
+                                    {calc.salaryType === 'hourly' ? `৳${calc.hourlyRate}/${lang === 'bn' ? 'ঘণ্টা' : 'hr'}` : (lang === 'bn' ? 'মাসিক' : 'Monthly')}
+                                  </span>
+                                  <span>•</span>
                                   <span>{lang === 'bn' ? `ডিউটি: ${emp.shiftStartTime || '09:00'}` : `Shift: ${emp.shiftStartTime || '09:00'}`}</span>
                                 </div>
                               </div>
@@ -7500,20 +7832,42 @@ export default function Dashboard() {
                           {isExpanded && (
                             <div className="bg-slate-50/70 border-t border-slate-100 p-4.5 sm:p-5 space-y-4 text-xs animate-slide-down">
                               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                <div className="space-y-0.5 bg-white p-3 rounded-2xl border border-slate-200/70 shadow-2xs">
-                                  <span className="text-slate-400 text-[9px] font-bold uppercase block tracking-wider">{lang === 'bn' ? 'মূল বেতন (Basic)' : 'Base Salary'}</span>
-                                  <span className="font-bold text-slate-800 text-xs sm:text-sm">৳{calc.baseSalary.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</span>
-                                </div>
-                                <div className="space-y-0.5 bg-white p-3 rounded-2xl border border-slate-200/70 shadow-2xs">
-                                  <span className="text-slate-400 text-[9px] font-bold uppercase block tracking-wider">{lang === 'bn' ? 'অনুপস্থিতি কর্তন' : 'Absent Deduction'}</span>
-                                  <span className="font-bold text-rose-600 text-xs sm:text-sm">- ৳{calc.absentDeduction.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</span>
-                                  <span className="text-[8.5px] text-slate-400 block font-bold">({calc.absentDaysCount} {lang === 'bn' ? 'দিন অনুপস্থিত' : 'days absent'})</span>
-                                </div>
-                                <div className="space-y-0.5 bg-white p-3 rounded-2xl border border-slate-200/70 shadow-2xs">
-                                  <span className="text-slate-400 text-[9px] font-bold uppercase block tracking-wider">{lang === 'bn' ? '৩ দিন লেট কর্তন' : 'Late Deduction (3:1)'}</span>
-                                  <span className="font-bold text-rose-600 text-xs sm:text-sm">- ৳{calc.lateDeduction.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</span>
-                                  <span className="text-[8.5px] text-slate-400 block font-bold">({calc.lateCount} {lang === 'bn' ? 'লেট =' : 'lates ='} {calc.lateCutDays} {lang === 'bn' ? 'দিন কাটা' : 'day cut'})</span>
-                                </div>
+                                {calc.salaryType === 'hourly' ? (
+                                  <>
+                                    <div className="space-y-0.5 bg-white p-3 rounded-2xl border border-slate-200/70 shadow-2xs">
+                                      <span className="text-slate-400 text-[9px] font-bold uppercase block tracking-wider">{lang === 'bn' ? 'ঘণ্টাভিত্তিক রেট' : 'Hourly Rate'}</span>
+                                      <span className="font-bold text-slate-800 text-xs sm:text-sm">৳{calc.hourlyRate.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')} / {lang === 'bn' ? 'ঘণ্টা' : 'hr'}</span>
+                                      <span className="text-[8.5px] text-emerald-600 block font-bold">{lang === 'bn' ? 'ঘণ্টাভিত্তিক চুক্তি' : 'Hourly Contract'}</span>
+                                    </div>
+                                    <div className="space-y-0.5 bg-white p-3 rounded-2xl border border-slate-200/70 shadow-2xs">
+                                      <span className="text-slate-400 text-[9px] font-bold uppercase block tracking-wider">{lang === 'bn' ? 'মোট কাজ (ডিউটি)' : 'Total Worked'}</span>
+                                      <span className="font-bold text-brand-green text-xs sm:text-sm">{toBnDigits(calc.totalWorkedHours)} {lang === 'bn' ? 'ঘণ্টা' : 'hrs'}</span>
+                                      <span className="text-[8.5px] text-slate-400 block font-bold">{lang === 'bn' ? `মোট ${calc.paidDays} দিন উপস্থিতি` : `${calc.paidDays} days worked`}</span>
+                                    </div>
+                                    <div className="space-y-0.5 bg-white p-3 rounded-2xl border border-slate-200/70 shadow-2xs">
+                                      <span className="text-slate-400 text-[9px] font-bold uppercase block tracking-wider">{lang === 'bn' ? 'ঘণ্টাভিত্তিক মোট উপার্জন' : 'Gross Hourly Pay'}</span>
+                                      <span className="font-bold text-emerald-600 text-xs sm:text-sm">৳{calc.grossHourlyPay.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</span>
+                                      <span className="text-[8.5px] text-slate-400 block font-bold">({toBnDigits(calc.totalWorkedHours)}h × ৳{calc.hourlyRate})</span>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <>
+                                    <div className="space-y-0.5 bg-white p-3 rounded-2xl border border-slate-200/70 shadow-2xs">
+                                      <span className="text-slate-400 text-[9px] font-bold uppercase block tracking-wider">{lang === 'bn' ? 'মূল বেতন (Basic)' : 'Base Salary'}</span>
+                                      <span className="font-bold text-slate-800 text-xs sm:text-sm">৳{calc.baseSalary.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</span>
+                                    </div>
+                                    <div className="space-y-0.5 bg-white p-3 rounded-2xl border border-slate-200/70 shadow-2xs">
+                                      <span className="text-slate-400 text-[9px] font-bold uppercase block tracking-wider">{lang === 'bn' ? 'অনুপস্থিতি কর্তন' : 'Absent Deduction'}</span>
+                                      <span className="font-bold text-rose-600 text-xs sm:text-sm">- ৳{calc.absentDeduction.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</span>
+                                      <span className="text-[8.5px] text-slate-400 block font-bold">({calc.absentDaysCount} {lang === 'bn' ? 'দিন অনুপস্থিত' : 'days absent'})</span>
+                                    </div>
+                                    <div className="space-y-0.5 bg-white p-3 rounded-2xl border border-slate-200/70 shadow-2xs">
+                                      <span className="text-slate-400 text-[9px] font-bold uppercase block tracking-wider">{lang === 'bn' ? '৩ দিন লেট কর্তন' : 'Late Deduction (3:1)'}</span>
+                                      <span className="font-bold text-rose-600 text-xs sm:text-sm">- ৳{calc.lateDeduction.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</span>
+                                      <span className="text-[8.5px] text-slate-400 block font-bold">({calc.lateCount} {lang === 'bn' ? 'লেট =' : 'lates ='} {calc.lateCutDays} {lang === 'bn' ? 'দিন কাটা' : 'day cut'})</span>
+                                    </div>
+                                  </>
+                                )}
                                 <div className="space-y-0.5 bg-white p-3 rounded-2xl border border-slate-200/70 shadow-2xs">
                                   <span className="text-slate-400 text-[9px] font-bold uppercase block tracking-wider">{lang === 'bn' ? 'শুক্রবার কাজের বোনাস' : 'Friday Work Bonus'}</span>
                                   <span className="font-bold text-emerald-600 text-xs sm:text-sm">+ ৳{calc.fridayBonus.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}</span>
